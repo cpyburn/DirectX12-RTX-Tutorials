@@ -46,8 +46,8 @@ When space is not specified, space0 is used. The binding of the resources is als
 ```c++
 // 10.1 #DXR
 ComPtr<ID3D12RootSignature> CreateRayGenSignature();
-ComPtr<ID3D12RootSignature> CreateMissSignature();
 ComPtr<ID3D12RootSignature> CreateHitSignature();
+ComPtr<ID3D12RootSignature> CreateMissSignature();
 
 void CreateRaytracingPipeline();
 
@@ -76,36 +76,65 @@ In D3D12HelloTriangle.cpp add the following includes to access the helper classe
 ## 10.2 CreateRayGenSignature
 The root signature of the RayGen program indicates the program needs to access the image output and the buffer containing the Top Level Acceleration Structure. For the sake of simplicity the root signatures introduced in this tutorial use our RootSignatureGenerator helper. The Add* methods essentially create D3D12_ROOT_PARAMETER descriptors for each entry, while the Generate call combine the descriptors into a D3D12_ROOT_SIGNATURE_DESC, itself used to call D3D12SerializeRootSignature and ID3D12Device::CreateRootSignature.
 
+```c++
+// 10.2
 //-----------------------------------------------------------------------------
 // The ray generation shader needs to access 2 resources: the raytracing output
 // and the top-level acceleration structure
 //
-ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateRayGenSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; rsc.AddHeapRangesParameter( {{0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/}, {0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/, 1}}); return rsc.Generate(m_device.Get(), true);
+
+ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature() 
+{ 
+	nv_helpers_dx12::RootSignatureGenerator rsc;
+	rsc.AddHeapRangesParameter(
+		{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/,
+		  D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
+		  0 /*heap slot where the UAV is defined*/},
+		 {0 /*t0*/, 1, 0,
+		  D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/,
+		  1} });
+
+	return rsc.Generate(m_device.Get(), true);
 }
+```
 
 ## 10.3 CreateHitSignature
 At first, our closest hit program will not need any external data. When the ray will hit the triangle, we will simply return a color in the payload, as indicated in Hit.hlsl.
 
+```c++
+// 10.3
 //-----------------------------------------------------------------------------
 // The hit shader communicates only through the ray payload, and therefore does
 // not require any resources
 //
-ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateHitSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; return rsc.Generate(m_device.Get(), true);
+ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() 
+{
+	nv_helpers_dx12::RootSignatureGenerator rsc;
+	return rsc.Generate(m_device.Get(), true);
 }
+```
 
 ## 10.4 CreateMissSignature
 The root signature of the miss shader is also empty since this shader only communicates through the ray payload.
 
+```c++
+// 10.4
 //-----------------------------------------------------------------------------
 // The miss shader communicates only through the ray payload, and therefore
 // does not require any resources
 //
-ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateMissSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; return rsc.Generate(m_device.Get(), true);
+ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateMissSignature() 
+{
+	nv_helpers_dx12::RootSignatureGenerator rsc;
+	return rsc.Generate(m_device.Get(), true);
 }
+```
 	
 ## 10.5 CreateRaytracingPipeline
 The raytracing pipeline binds the shader code, root signatures and pipeline characteristics in a single structure used by DXR to invoke the shaders and manage temporary memory during raytracing. The setup of the pipeline requires creating and combining numerous DirectX 12 subobjects, a concept introduced with DXR. In this tutorial we use the RayTracingPipeline helper to simplify the code and enforce consistency across the created objects. Internally, each Add* method corresponds to one or more D3D12_STATE_SUBOBJECT added to an array of such subobjects defining the pipeline. We start the method by generating the DXIL libraries for each shader. This helper function first opens the indicated file and loads its contents. If needed, it initializes the compiler and creates a IDxcBlobEncoding structure from the file contents by calling IDxcLibrary::CreateBlobWithEncodingFromPinned(). It then compiles the data by calling IDxcCompiler::Compile(), which returns the IDxcBlob pointer that we store in the class.
 
+```c++
+// 10.5
 //-----------------------------------------------------------------------------
 //
 // The raytracing pipeline binds the shader code, root signatures and pipeline
@@ -113,38 +142,141 @@ The raytracing pipeline binds the shader code, root signatures and pipeline char
 // manage temporary memory during raytracing
 //
 //
-void D3D12HelloTriangle::CreateRaytracingPipeline()
-{ nv_helpers_dx12::RayTracingPipelineGenerator pipeline(m_device.Get()); // The pipeline contains the DXIL code of all the shaders potentially executed // during the raytracing process. This section compiles the HLSL code into a // set of DXIL libraries. We chose to separate the code in several libraries // by semantic (ray generation, hit, miss) for clarity. Any code layout can be // used. m_rayGenLibrary = nv_helpers_dx12::CompileShaderLibrary(L"RayGen.hlsl"); m_missLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Miss.hlsl"); m_hitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Hit.hlsl");
+void D3D12HelloTriangle::CreateRaytracingPipeline() 
+{
+	nv_helpers_dx12::RayTracingPipelineGenerator pipeline(m_device.Get());
+
+	// The pipeline contains the DXIL code of all the shaders potentially executed
+	// during the raytracing process. This section compiles the HLSL code into a
+	// set of DXIL libraries. We chose to separate the code in several libraries
+	// by semantic (ray generation, hit, miss) for clarity. Any code layout can be
+	// used.
+	m_rayGenLibrary = nv_helpers_dx12::CompileShaderLibrary(L"RayGen.hlsl");
+	m_missLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Miss.hlsl");
+	m_hitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Hit.hlsl");
+
+	// In a way similar to DLLs, each library is associated with a number of
+	// exported symbols. This
+	// has to be done explicitly in the lines below. Note that a single library
+	// can contain an arbitrary number of symbols, whose semantic is given in HLSL
+	// using the [shader("xxx")] syntax
+	pipeline.AddLibrary(m_rayGenLibrary.Get(), { L"RayGen" });
+	pipeline.AddLibrary(m_missLibrary.Get(), { L"Miss" });
+	pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit" });
+
+	// To be used, each DX12 shader needs a root signature defining which
+	// parameters and buffers will be accessed.
+	m_rayGenSignature = CreateRayGenSignature();
+	m_missSignature = CreateMissSignature();
+	m_hitSignature = CreateHitSignature();
+
+	// 3 different shaders can be invoked to obtain an intersection: an
+	// intersection shader is called
+	// when hitting the bounding box of non-triangular geometry. This is beyond
+	// the scope of this tutorial. An any-hit shader is called on potential
+	// intersections. This shader can, for example, perform alpha-testing and
+	// discard some intersections. Finally, the closest-hit program is invoked on
+	// the intersection point closest to the ray origin. Those 3 shaders are bound
+	// together into a hit group.
+
+	// Note that for triangular geometry the intersection shader is built-in. An
+	// empty any-hit shader is also defined by default, so in our simple case each
+	// hit group contains only the closest hit shader. Note that since the
+	// exported symbols are defined above the shaders can be simply referred to by
+	// name.
+
+	// Hit group for the triangles, with a shader simply interpolating vertex
+	// colors
+	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
+
+	// The following section associates the root signature to each shader. Note
+	// that we can explicitly show that some shaders share the same root signature
+	// (eg. Miss and ShadowMiss). Note that the hit shaders are now only referred
+	// to as hit groups, meaning that the underlying intersection, any-hit and
+	// closest-hit shaders share the same root signature.
+	pipeline.AddRootSignatureAssociation(m_rayGenSignature.Get(), { L"RayGen" });
+	pipeline.AddRootSignatureAssociation(m_missSignature.Get(), { L"Miss" });
+	pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
+
+	// The payload size defines the maximum size of the data carried by the rays,
+	// ie. the the data
+	// exchanged between shaders, such as the HitInfo structure in the HLSL code.
+	// It is important to keep this value as low as possible as a too high value
+	// would result in unnecessary memory consumption and cache trashing.
+	pipeline.SetMaxPayloadSize(4 * sizeof(float)); // RGB + distance
+
+	// Upon hitting a surface, DXR can provide several attributes to the hit. In
+	// our sample we just use the barycentric coordinates defined by the weights
+	// u,v of the last two vertices of the triangle. The actual barycentrics can
+	// be obtained using float3 barycentrics = float3(1.f-u-v, u, v);
+	pipeline.SetMaxAttributeSize(2 * sizeof(float)); // barycentric coordinates
+
+	// The raytracing process can shoot rays from existing hit points, resulting
+	// in nested TraceRay calls. Our sample code traces only primary rays, which
+	// then requires a trace depth of 1. Note that this recursion depth should be
+	// kept to a minimum for best performance. Path tracing algorithms can be
+	// easily flattened into a simple loop in the ray generation.
+	pipeline.SetMaxRecursionDepth(1);
+
+	// Compile the pipeline for execution on the GPU
+	m_rtStateObject = pipeline.Generate();
+
+	// Cast the state object into a properties object, allowing to later access
+	// the shader pointers by name
+	ThrowIfFailed(m_rtStateObject->QueryInterface(IID_PPV_ARGS(&m_rtStateObjectProps)));
+}
+```
+
 A DXIL library can be seen similarly as a regular DLL, which contains compiled code that can be accessed using a number of exported symbols. In the case of the raytracing pipeline, such symbols correspond to the names of the functions implementing the shader programs. For each file, we then add the library pointer in the pipeline, along with the name of the function it contains. Note that a single library can export an arbitrary number of symbols, and that the pipeline is allowed to only import a subset of those.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 As described at the beginning of this section, to each shader corresponds a root signature defining
 its external inputs.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ // To be used, each DX12 shader needs a root signature defining which // parameters and buffers will be accessed. m_rayGenSignature = CreateRayGenSignature(); m_missSignature = CreateMissSignature(); m_hitSignature = CreateHitSignature();
+
+```c++
+// To be used, each DX12 shader needs a root signature defining which
+// parameters and buffers will be accessed.
+m_rayGenSignature = CreateRayGenSignature();
+m_missSignature = CreateMissSignature();
+m_hitSignature = CreateHitSignature();
+```
+ 
 The computation of the intersection of the ray with the geometry is separated into the intersection shader, the any hit shader, and the closest hit shader. Those 3 shaders are bound together into a hit group. In our case we use the built-in intersection and any hit shaders, so our hit group HitGroup only contains the closest hit shader ClosestHit.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ To be used, each shader needs to be associated to its root signature. A shaders imported from the DXIL libraries needs to be associated with exactly one root signature. The shaders comprising the hit groups need to share the same root signature, which is associated to the hit group (and not to the shaders themselves). Note that a shader does not have to actually access all the resources declared in its root signature, as long as the root signature defines a superset of the resources the shader needs.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ // The following section associates the root signature to each shader. Note // that we can explicitly show that some shaders share the same root signature // (eg. Miss and ShadowMiss). Note that the hit shaders are now only referred // to as hit groups, meaning that the underlying intersection, any-hit and // closest-hit shaders share the same root signature. pipeline.AddRootSignatureAssociation(m_rayGenSignature.Get(), {L"RayGen"}); pipeline.AddRootSignatureAssociation(m_missSignature.Get(), {L"Miss"}); pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), {L"HitGroup"});
+To be used, each shader needs to be associated to its root signature. A shaders imported from the DXIL libraries needs to be associated with exactly one root signature. The shaders comprising the hit groups need to share the same root signature, which is associated to the hit group (and not to the shaders themselves). Note that a shader does not have to actually access all the resources declared in its root signature, as long as the root signature defines a superset of the resources the shader needs.
+
+```c++
+// The following section associates the root signature to each shader. Note
+// that we can explicitly show that some shaders share the same root signature
+// (eg. Miss and ShadowMiss). Note that the hit shaders are now only referred
+// to as hit groups, meaning that the underlying intersection, any-hit and
+// closest-hit shaders share the same root signature.
+pipeline.AddRootSignatureAssociation(m_rayGenSignature.Get(), { L"RayGen" });
+pipeline.AddRootSignatureAssociation(m_missSignature.Get(), { L"Miss" });
+pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
+```
+
 The Set* methods setup specific subobjects related to the global properties of the pipeline itself:
 
-The maximum payload size used by the shaders, which defines the amount of data a shader can exchange with other shaders. A typical example is a payload containing a color value, so that the hit or miss shaders can return this value to the ray generation program, which will write that value to the output buffer. To achieve best performance the payload needs to be kept as small as possible. In our case the payload contains 4 floating-point values stored in the HitInfo structure in Common.hlsl, representing the output color and the distance of the hit from the ray origin.
-The attributes size, which is set by the intersection shader. We use the built-in triangle intersection shader that return 2 floating-point values corresponding to the barycentric coordinates of the hit point inside the triangle. Those values are accessed using the Attributes structure in Common.hlsl
-The maximum recursion depth, which describes how many nested TraceRay() calls can be made while tracing. One level of recursion can for example be used to shoot shadow rays from a hit point. Note that, however, this recursion level must be kept as low as possible for performance. Therefore, implementing a path tracer should not be done using recursion: the multiple bounces should be implemented in a loop in the ray generation program instead. In our case, we will only call TraceRay() once to cast a ray from the camera without further bounces, hence a recursion level of 1.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* The maximum payload size used by the shaders, which defines the amount of data a shader can exchange with other shaders. A typical example is a payload containing a color value, so that the hit or miss shaders can return this value to the ray generation program, which will write that value to the output buffer. To achieve best performance the payload needs to be kept as small as possible. In our case the payload contains 4 floating-point values stored in the HitInfo structure in Common.hlsl, representing the output color and the distance of the hit from the ray origin.
+* The attributes size, which is set by the intersection shader. We use the built-in triangle intersection shader that return 2 floating-point values corresponding to the barycentric coordinates of the hit point inside the triangle. Those values are accessed using the Attributes structure in Common.hlsl
+* The maximum recursion depth, which describes how many nested TraceRay() calls can be made while tracing. One level of recursion can for example be used to shoot shadow rays from a hit point. Note that, however, this recursion level must be kept as low as possible for performance. Therefore, implementing a path tracer should not be done using recursion: the multiple bounces should be implemented in a loop in the ray generation program instead. In our case, we will only call TraceRay() once to cast a ray from the camera without further bounces, hence a recursion level of 1.
+
 The pipeline now has all the information it needs. We generate the pipeline by calling the `Generate`
 method of the helper, which creates the array of subobjects and calls
-`ID3D12Device5::CreateStateObject`.
-}
+```c++
+m_device->CreateStateObject
+```
 
 ## 10.6 OnInit()
 Add the call at the end of the function to create the raytracing pipeline
 
+```c++
+// 10.6
 // Create the raytracing pipeline, associating the shader code to symbol names
 // and to their root signatures, and defining the amount of memory carried by
 // rays (ray payload)
-CreateRaytracingPipeline(); // #DXR
-Double check the program compiles and run.
-!!! Tip Double check the program compiles and run.
+CreateRaytracingPipeline();
+```
 
 ## 3 Creating Resources
 Unlike the rasterization, the raytracing process does not write directly to the render target: instead, it writes its results into a buffer bound as an unordered access view (UAV), which is then copied to the render target for display. Also, any shader program that calls TraceRay() needs to be able to access the top-level acceleration structure (TLAS). As shown in the Shading Pipeline section, the root signature of the ray generation shader defines the access to both buffers as two ranges within a resource heap. In this section we will first create the raytracing output buffer m_outputResource, and then create the heap m_srvUavHeap referencing both that buffer and the TLAS. Add the following declaration in D3D12HelloTriangle.h
