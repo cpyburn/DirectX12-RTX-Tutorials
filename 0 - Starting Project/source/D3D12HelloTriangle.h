@@ -70,7 +70,7 @@ private:
 
 	// STEP 6.1
 	ComPtr<ID3D12Device5> m_device; // renamed from ID3D12Device to ID3D12Device5
-	ComPtr<ID3D12GraphicsCommandList> m_commandList; // renamed from ID3D12GraphicsCommandList to ID3D12GraphicsCommandList4
+	ComPtr<ID3D12GraphicsCommandList4> m_commandList; // renamed from ID3D12GraphicsCommandList to ID3D12GraphicsCommandList4
 
 	void CheckRaytracingSupport(); // 6.4
 	bool m_raster = true;
