@@ -47,7 +47,7 @@ In the following tutorial, we will use some utility functions that are abstracti
 
 1. Add the utility files to the solution
 2. Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
-[!Project Properties](2.PNG)
+![Project Properties](2.PNG)
 3. Add $(ProjectDir) to the project include C/C++> General> Additional Include Directories
 
 ### After each step, you should be able to run the sample. At this point, nothing visual has changed.
