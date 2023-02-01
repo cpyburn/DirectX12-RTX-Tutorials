@@ -25,7 +25,7 @@ The Raytracing Pipeline
 In this tutorial we will create a pipeline containing only the 3 mandatory shader programs: a single ray generation, single miss and a single closest hit. This is done by first compiling each shader program into a DirectX Intermediate Language (DXIL) library using the DirectX Compiler IDxcCompiler with the target lib_6_3. This target has been introduced with DXR. Such libraries will be linked together within the raytracing pipeline, which will be able to route the intersection calculations to the right hit shaders. To be able to focus on the pipeline generation, we provide simplistic shaders:
 
 ### Shaders - [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/Shaders.zip) the shaders and extract the content to the main folder.
-### Adding to the Solution If you are adding the shaders to the solution, you need to exclude them from compilation otherwise you will get compilation errors.
+### Adding to the Solution - If you are adding the shaders to the solution, you need to exclude them from compilation otherwise you will get compilation errors.
 
 This archive contains 4 files:
 
@@ -43,27 +43,37 @@ RWTexture2D<float4> gEnvironment : register(u0, space1);
 ```
 When space is not specified, space0 is used. The binding of the resources is also defined explicitly using root signatures, which must match the order and types defined within the shader. Each binding in ther shader corresponds to an entry in the root signature. A root signature entry is defined by a D3D12_ROOT_PARAMETER. Each entry has a type, such as D3D12_ROOT_PARAMETER_TYPE_CBV for a direct access to a pointer on a constant buffer. Such direct accesses can also be used for UAV (D3D12_ROOT_PARAMETER_TYPE_UAV) and shader resources (D3D12_ROOT_PARAMETER_TYPE_SRV). An entry can also be a set of directly specified constants (D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS), which correspond to register (b). Finally, an entry can also point to ranges of slots within the currently bound heap (D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE). Note that even if a shader does not access external resources (e.g. returning a hardcoded color) a root signature needs to be defined. In this case the signature will not have any parameters. We therefore add the following declarations in the header files: methods to create the root signatures and the pipeline itself, the storage for the IDxcBlob containing the DXIL libraries of the shaders, the root signatures of the shaders, and the pipeline object itself m_rtStateObject. This latter will also to be cast to a ID3D12StateObjectProperties as well to access some of its functionalities, particularly the method looking up shader identifiers using their name string, ID3D12StateObjectProperties::GetShaderIdentifier().
 
-// #DXR
-ComPtr<id3d12rootsignature> CreateRayGenSignature();
-ComPtr<id3d12rootsignature> CreateMissSignature();
-ComPtr<id3d12rootsignature> CreateHitSignature();
+```c++
+// 10.1 #DXR
+ComPtr<ID3D12RootSignature> CreateRayGenSignature();
+ComPtr<ID3D12RootSignature> CreateMissSignature();
+ComPtr<ID3D12RootSignature> CreateHitSignature();
+
 void CreateRaytracingPipeline();
-ComPtr<idxcblob> m_rayGenLibrary;
-ComPtr<idxcblob> m_hitLibrary;
-ComPtr<idxcblob> m_missLibrary;
-ComPtr<id3d12rootsignature> m_rayGenSignature;
-ComPtr<id3d12rootsignature> m_hitSignature;
-ComPtr<id3d12rootsignature> m_missSignature;
+
+ComPtr<IDxcBlob> m_rayGenLibrary;
+ComPtr<IDxcBlob> m_hitLibrary;
+ComPtr<IDxcBlob> m_missLibrary;
+
+ComPtr<ID3D12RootSignature> m_rayGenSignature;
+ComPtr<ID3D12RootSignature> m_hitSignature;
+ComPtr<ID3D12RootSignature> m_missSignature;
+
 // Ray tracing pipeline state
-ComPtr<id3d12stateobject> m_rtStateObject;
+ComPtr<ID3D12StateObject> m_rtStateObject;
 // Ray tracing pipeline state properties, retaining the shader identifiers
 // to use in the Shader Binding Table
-ComPtr<id3d12stateobjectproperties> m_rtStateObjectProps;
+ComPtr<ID3D12StateObjectProperties> m_rtStateObjectProps;
+```
+
 In D3D12HelloTriangle.cpp add the following includes to access the helper classes for the generation of the raytracing pipeline and the root signatures.
 
+```c++
 #include "nv_helpers_dx12/RaytracingPipelineGenerator.h"
 #include "nv_helpers_dx12/RootSignatureGenerator.h"
-CreateRayGenSignature
+```
+
+## 10.2 CreateRayGenSignature
 The root signature of the RayGen program indicates the program needs to access the image output and the buffer containing the Top Level Acceleration Structure. For the sake of simplicity the root signatures introduced in this tutorial use our RootSignatureGenerator helper. The Add* methods essentially create D3D12_ROOT_PARAMETER descriptors for each entry, while the Generate call combine the descriptors into a D3D12_ROOT_SIGNATURE_DESC, itself used to call D3D12SerializeRootSignature and ID3D12Device::CreateRootSignature.
 
 //-----------------------------------------------------------------------------
@@ -72,7 +82,8 @@ The root signature of the RayGen program indicates the program needs to access t
 //
 ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateRayGenSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; rsc.AddHeapRangesParameter( {{0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/}, {0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/, 1}}); return rsc.Generate(m_device.Get(), true);
 }
-CreateHitSignature
+
+## 10.3 CreateHitSignature
 At first, our closest hit program will not need any external data. When the ray will hit the triangle, we will simply return a color in the payload, as indicated in Hit.hlsl.
 
 //-----------------------------------------------------------------------------
@@ -81,7 +92,8 @@ At first, our closest hit program will not need any external data. When the ray 
 //
 ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateHitSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; return rsc.Generate(m_device.Get(), true);
 }
-CreateMissSignature
+
+## 10.4 CreateMissSignature
 The root signature of the miss shader is also empty since this shader only communicates through the ray payload.
 
 //-----------------------------------------------------------------------------
@@ -90,7 +102,8 @@ The root signature of the miss shader is also empty since this shader only commu
 //
 ComPtr<id3d12rootsignature> D3D12HelloTriangle::CreateMissSignature() { nv_helpers_dx12::RootSignatureGenerator rsc; return rsc.Generate(m_device.Get(), true);
 }
-CreateRaytracingPipeline
+	
+## 10.5 CreateRaytracingPipeline
 The raytracing pipeline binds the shader code, root signatures and pipeline characteristics in a single structure used by DXR to invoke the shaders and manage temporary memory during raytracing. The setup of the pipeline requires creating and combining numerous DirectX 12 subobjects, a concept introduced with DXR. In this tutorial we use the RayTracingPipeline helper to simplify the code and enforce consistency across the created objects. Internally, each Add* method corresponds to one or more D3D12_STATE_SUBOBJECT added to an array of such subobjects defining the pipeline. We start the method by generating the DXIL libraries for each shader. This helper function first opens the indicated file and loads its contents. If needed, it initializes the compiler and creates a IDxcBlobEncoding structure from the file contents by calling IDxcLibrary::CreateBlobWithEncodingFromPinned(). It then compiles the data by calling IDxcCompiler::Compile(), which returns the IDxcBlob pointer that we store in the class.
 
 //-----------------------------------------------------------------------------
@@ -122,7 +135,8 @@ The pipeline now has all the information it needs. We generate the pipeline by c
 method of the helper, which creates the array of subobjects and calls
 `ID3D12Device5::CreateStateObject`.
 }
-OnInit()
+
+## 10.6 OnInit()
 Add the call at the end of the function to create the raytracing pipeline
 
 // Create the raytracing pipeline, associating the shader code to symbol names
@@ -131,7 +145,8 @@ Add the call at the end of the function to create the raytracing pipeline
 CreateRaytracingPipeline(); // #DXR
 Double check the program compiles and run.
 !!! Tip Double check the program compiles and run.
-Creating Resources
+
+## 3 Creating Resources
 Unlike the rasterization, the raytracing process does not write directly to the render target: instead, it writes its results into a buffer bound as an unordered access view (UAV), which is then copied to the render target for display. Also, any shader program that calls TraceRay() needs to be able to access the top-level acceleration structure (TLAS). As shown in the Shading Pipeline section, the root signature of the ray generation shader defines the access to both buffers as two ranges within a resource heap. In this section we will first create the raytracing output buffer m_outputResource, and then create the heap m_srvUavHeap referencing both that buffer and the TLAS. Add the following declaration in D3D12HelloTriangle.h
 
 // #DXR
