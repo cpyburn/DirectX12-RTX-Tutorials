@@ -623,40 +623,102 @@ Raytrace
 ### Alternating between rasterization and raytracing using the spacebar
 Open RayGen.hlsl and change the value of the return.
 
-Simple RayGen and Hit shader
+## 14. Simple RayGen and Hit shader
 So far, when we are calling DispatchRays(), the ray generation shader RayGen() is called, but no rays are created. We will change this by adding an orthogonal view and then change the hit shader to look like the rasterized triangle.
 
-RayGen
+## 14.1 RayGen
 We will modify the HLSL code of the RayGen() function of the shader file RayGen.hlsl to trace one ray per pixel using the same orthographic camera as the default rasterization. We first initialize the ray payload, that will be used to gather the results of the raytracing. The built-in DispatchRaysIndex() provides the 2D coordinates of the current pixel, while DispatchRaysDimensions() returns the size of the image being rendered. From this, we can deduce the floating-point pixel coordinates d, normalized on [0,1] \times [0,1] .
 
-// Initialize the ray payload
-HitInfo payload;
-payload.colorAndDistance = float4(0, 0, 0, 0);
+```c++
 // Get the location within the dispatched 2D grid of work items
 // (often maps to pixels, so this could represent a pixel coordinate).
 uint2 launchIndex = DispatchRaysIndex().xy;
 float2 dims = float2(DispatchRaysDimensions().xy);
 float2 d = (((launchIndex.xy + 0.5f) / dims.xy) * 2.f - 1.f);
+```
+
 Knowing the default camera is located at (0, 0, 1) and looking in the direction (0, 0, -1), we can setup a ray descriptor RayDesc representing a ray shooting straight through each pixel by offsetting the x and y coordinates of the ray origin by the normalized floating-point pixel coordinates. Note that the y coordinate is inverted to match the image indexing convention of DirectX. The minimum hit distance TMin is the equivalent of the camera near clipping plane in the rasterization world, although for raytracing a value of 0 is valid. The value TMax is equivalent to the far clipping plane. Note that unlike rasterization, the ratio between TMin and TMax does not have any impact on the precision of the intersection calculations.
 
-// Define a ray, consisting of origin, direction, and the min-max distance values
+```c++
+// Define a ray, consisting of origin, direction, and the min-max distance
+// values
 RayDesc ray;
 ray.Origin = float3(d.x, -d.y, 1);
 ray.Direction = float3(0, 0, -1);
 ray.TMin = 0;
 ray.TMax = 100000;
+```
+
 The ray is then traced using the TraceRay call: it will traverse the acceleration structures and invoke the hit group or miss shader depending on the outcome of the traversal. The ray flags are left to the default RAY_FLAG_NONE, but they can be used to optimize the behavior upon hitting a surface, for example to bypass the invocation of any hit shaders (RAY_FLAG_FORCE_OPAQUE). The InstanceInclusionMask mask can be used to exclude some geometry from the raytracing by doing a bitewise AND between that mask and the instance's mask. The flags are 0xFF by default, hence setting the ray flag to 0xFF no geometry will be masked. The next two parameters showcase the amount of flexibility provided by DXR when it comes to finding the hit group corresponding to a given geometry instance. Note that the provided helpers for the top-level acceleration structure and the shader binding table only support a subset of what is possible. The RayContributionToHitGroupIndex depends on the type of ray. When using multiple ray types, a given object can have several hit groups attached (ie. what to do when hitting to compute regular shading, and what to do when hitting to compute shadows). Those hit groups are specified sequentially in the SBT, so the value of that parameter indicates which offset (on 4 bits) to apply to the hit groups for this ray. In this sample we only have one hit group per object, hence an offset of 0. The MultiplierForGeometryContributionToHitGroupIndex indicates how to compute the index of the hit groups in the SBT based on the instance index. The offsets in the SBT can be computed from the object ID, its instance ID, but also simply by the order the objects have been pushed in the acceleration structure. This allows the application to group shaders in the SBT in the same order as they are added in the AS, in which case the value below represents the stride (4 bits representing the number of hit groups) between two consecutive objects. Finally, the ray descriptor and the payload are also passed to TraceRay to drive the traversal and carry data to and from the hit group and miss shader.
 
-// Trace the ray
-TraceRay( // Parameter name: AccelerationStructure // Acceleration structure SceneBVH, // Parameter name: RayFlags // Flags can be used to specify the behavior upon hitting a surface RAY_FLAG_NONE, // Parameter name: InstanceInclusionMask // Instance inclusion mask, which can be used to mask out some geometry to this ray by // and-ing the mask with a geometry mask. The 0xFF flag then indicates no geometry will be // masked 0xFF, // Parameter name: RayContributionToHitGroupIndex // Depending on the type of ray, a given object can have several hit groups attached // (ie. what to do when hitting to compute regular shading, and what to do when hitting // to compute shadows). Those hit groups are specified sequentially in the SBT, so the value // below indicates which offset (on 4 bits) to apply to the hit groups for this ray. In this // sample we only have one hit group per object, hence an offset of 0. 0, // Parameter name: MultiplierForGeometryContributionToHitGroupIndex // The offsets in the SBT can be computed from the object ID, its instance ID, but also simply // by the order the objects have been pushed in the acceleration structure. This allows the // application to group shaders in the SBT in the same order as they are added in the AS, in // which case the value below represents the stride (4 bits representing the number of hit // groups) between two consecutive objects. 0, // Parameter name: MissShaderIndex // Index of the miss shader to use in case several consecutive miss shaders are present in the // SBT. This allows to change the behavior of the program when no geometry have been hit, for // example one to return a sky color for regular rendering, and another returning a full // visibility value for shadow rays. This sample has only one miss shader, hence an index 0 0, // Parameter name: Ray // Ray information to trace ray, // Parameter name: Payload // Payload associated to the ray, which will be used to communicate between the hit/miss // shaders and the raygen payload);
+```c++
+  // Trace the ray
+  TraceRay(
+      // Parameter name: AccelerationStructure
+      // Acceleration structure
+      SceneBVH,
+
+      // Parameter name: RayFlags
+      // Flags can be used to specify the behavior upon hitting a surface
+      RAY_FLAG_NONE,
+
+      // Parameter name: InstanceInclusionMask
+      // Instance inclusion mask, which can be used to mask out some geometry to
+      // this ray by and-ing the mask with a geometry mask. The 0xFF flag then
+      // indicates no geometry will be masked
+      0xFF,
+
+      // Parameter name: RayContributionToHitGroupIndex
+      // Depending on the type of ray, a given object can have several hit
+      // groups attached (ie. what to do when hitting to compute regular
+      // shading, and what to do when hitting to compute shadows). Those hit
+      // groups are specified sequentially in the SBT, so the value below
+      // indicates which offset (on 4 bits) to apply to the hit groups for this
+      // ray. In this sample we only have one hit group per object, hence an
+      // offset of 0.
+      0,
+
+      // Parameter name: MultiplierForGeometryContributionToHitGroupIndex
+      // The offsets in the SBT can be computed from the object ID, its instance
+      // ID, but also simply by the order the objects have been pushed in the
+      // acceleration structure. This allows the application to group shaders in
+      // the SBT in the same order as they are added in the AS, in which case
+      // the value below represents the stride (4 bits representing the number
+      // of hit groups) between two consecutive objects.
+      0,
+
+      // Parameter name: MissShaderIndex
+      // Index of the miss shader to use in case several consecutive miss
+      // shaders are present in the SBT. This allows to change the behavior of
+      // the program when no geometry have been hit, for example one to return a
+      // sky color for regular rendering, and another returning a full
+      // visibility value for shadow rays. This sample has only one miss shader,
+      // hence an index 0
+      0,
+
+      // Parameter name: Ray
+      // Ray information to trace
+      ray,
+
+      // Parameter name: Payload
+      // Payload associated to the ray, which will be used to communicate
+      // between the hit/miss shaders and the raygen
+      payload);
+```
+
 The TraceRay is blocking, in essence similar to a texure lookup, for which the result is available right after calling the texture sampler. Therefore right after TraceRay the entire raytracing for that pixel has been done and the payload represents the result of the execution of the various shaders potentially invoked during raytracing. We can then read the payload and write it to the output buffer.
 
+```c++
 gOutput[launchIndex] = float4(payload.colorAndDistance.rgb, 1.f);
+```
+
 The closest hit and miss shaders are still the original ones returning a solid color:
 
+![](14.1.PNG)
 
 Figure 3: Yellow: Hit shader, Blue: Miss shader
-Hit Shader
+
+## 14.2 Hit Shader
 We can also change the the ClosestHit() function of Hit.hlsl to interpolate colors across the triangle similarly to the rasterizer. To do this, we take the barycentric coordinates attribute attrib provided by the built-in triangle intersection shader, and use those to interpolate between hardcoded color values. We then write in the payload, which will make those values available in the ray generation shader afterwards.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
