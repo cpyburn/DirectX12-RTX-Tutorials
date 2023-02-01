@@ -501,40 +501,56 @@ After adding the shader program names to the SBT entries, the Generate call of t
 ## 12.3 OnInit()
 Add the following line to call the creation of the SBT.
 
+```c++
+// 12.3
 // Create the shader binding table and indicating which shaders
-// are invoked for each instance in the AS
+// are invoked for each instance in the  AS
 CreateShaderBindingTable();
-Calling the Raytracer
+```
+
+## 13. Calling the Raytracer
 In this step, we will launch the raytracing process and copy the resulting output buffer into the render target. At this point, we still use the provided ray generation program, which does not invoke any raytracing. Instead, it simply sets an orange color in all pixels.
 
-PopulateCommandList()
+## 13.1 PopulateCommandList()
 Find the if-else for the raytracing and replace the clear buffer by the call to raytracing. The main parts of this section are the setup of the raytracing descriptor D3D12_DISPATCH_RAYS_DESC which defines how to interpret the Shader Binding Table, and how many pixels need to be rendered (ie. how many threads will run the ray generation program simultaneously). The raytracing is actually performed by calling ID3D12GraphicsCommandList4::DispatchRays(). We first set the current heap as m_srvUavHeap, so that the raytracing output buffer and the top-level acceleration structure will be accessible from the shaders:
 
-// #DXR
+```c++
+// 13.1 #DXR
 // Bind the descriptor heap giving access to the top-level acceleration
 // structure, as well as the raytracing output
-std::vector<id3d12descriptorheap*> heaps = {m_srvUavHeap.Get()};
-m_commandList->SetDescriptorHeaps(static_cast<uint>(heaps.size()), heaps.data());
+std::vector<ID3D12DescriptorHeap*> heaps = { m_srvUavHeap.Get() };
+m_commandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+```
+
 As previously described raytracing, unlike rasterization, cannot directly render into a render target. Instead, we need to copy the contents of the raytracing output into the render target using CD3DX12_RESOURCE_BARRIER::Transition objects. When entering the PopulateCommandList method the raytracing output buffer is in a D3D12_RESOURCE_STATE_COPY_SOURCE state. In order to allow the ray generation shader to write to the buffer as a UAV, we transition the buffer into the D3D12_RESOURCE_STATE_UNORDERED_ACCESS
 
+```c++
 // On the last frame, the raytracing output was used as a copy source, to
 // copy its contents into the render target. Now we need to transition it to
 // a UAV so that the shaders can write in it.
-CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition( m_outputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_outputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 m_commandList->ResourceBarrier(1, &transition);
+```
+
 The D3D12_DISPATCH_RAYS_DESC descriptor specifies the work to be done during raytracing: specifically it contains the entry points in the Shader Binding Table (SBT), and the size of the image to render. Using the helper class, the SBT always contains first the ray generation shader, then the miss shaders, and finally the hit groups. The start address of the SBT section containing the ray generation shader is then the beginning of the SBT buffer. Each ray generation entry in the SBT has the same size, which is also obtained from the helpers GetRayGenSectionSize call. This enforces consistency between the SBT and the raytracing, which is a common source of errors. Note that only one ray generation shader is allowed, since this is the entry point of the raytracing process. If several ray generation shaders were present in the SBT, we would need to offset the StartAddress of the ray generation shader record accordingly.
 
+```c++
 // Setup the raytracing task
 D3D12_DISPATCH_RAYS_DESC desc = {};
 // The layout of the SBT is as follows: ray generation shader, miss
 // shaders, hit groups. As described in the CreateShaderBindingTable method,
-// all SBT entries of a given type have the same size to allow a fixed stride.
+// all SBT entries of a given type have the same size to allow a fixed
+// stride.
+
 // The ray generation shaders are always at the beginning of the SBT.
 uint32_t rayGenerationSectionSizeInBytes = m_sbtHelper.GetRayGenSectionSize();
 desc.RayGenerationShaderRecord.StartAddress = m_sbtStorage->GetGPUVirtualAddress();
 desc.RayGenerationShaderRecord.SizeInBytes = rayGenerationSectionSizeInBytes;
+```
+
 The miss shaders immediately follow the ray generation shaders, hence the beginning of the miss shaders is obtained by offsetting the SBT buffer pointer by the size of the ray generation section. The StrideInBytes allows raytracing to use several miss programs, each associated to a ray type. This allows for example to have primary rays, for which the miss shader would return the environment color, and shadow rays for which the miss shader returns a visibility value.
 
+```c++
 // The miss shaders are in the second SBT section, right after the ray
 // generation shader. We have one miss shader for the camera rays and one
 // for the shadow rays, so this section has a size of 2*m_sbtEntrySize. We
@@ -544,40 +560,56 @@ uint32_t missSectionSizeInBytes = m_sbtHelper.GetMissSectionSize();
 desc.MissShaderTable.StartAddress = m_sbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes;
 desc.MissShaderTable.SizeInBytes = missSectionSizeInBytes;
 desc.MissShaderTable.StrideInBytes = m_sbtHelper.GetMissEntrySize();
+```
+
 The hit groups are defined similarly to the miss shaders. In practice the SBT will contain many hit groups, just like a rasterization-based renderer would have many pixel shaders. When using several ray types, the resulting hit groups should be packed together, as shown in the Shadows example in the Going Further section.
 
+```c++
 // The hit groups section start after the miss shaders. In this sample we
 // have one 1 hit group for the triangle
 uint32_t hitGroupsSectionSize = m_sbtHelper.GetHitGroupSectionSize();
 desc.HitGroupTable.StartAddress = m_sbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes + missSectionSizeInBytes;
 desc.HitGroupTable.SizeInBytes = hitGroupsSectionSize;
 desc.HitGroupTable.StrideInBytes = m_sbtHelper.GetHitGroupEntrySize();
+```
+
 The raytracing descriptor also contains the size of the image to render, which defines the number of threads running the ray generation program simultaneously.
 
+```c++
 // Dimensions of the image to render, identical to a kernel launch dimension
 desc.Width = GetWidth();
 desc.Height = GetHeight();
 desc.Depth = 1;
+```
+
 We then bind the raytracing pipeline in the command list. The DispatchRays call is the one actually enqueuing the raytracing work on the command list.
 
+```c++
 // Bind the raytracing pipeline
 m_commandList->SetPipelineState1(m_rtStateObject.Get());
 // Dispatch the rays and write to the raytracing output
 m_commandList->DispatchRays(&desc);
+```
+
 Once the raytraced image is generated, it still needs to be copied into the render target so that it can be displayed. For this, we first transition the raytracing output m_outputResource from the D3D12_RESOURCE_STATE_UNORDERED_ACCESS it had to allow the shaders to write to it, to a D3D12_RESOURCE_STATE_COPY_SOURCE. At this point, the render target has a D3D12_RESOURCE_STATE_RENDER_TARGET state, which allows it to be presented on the screen. We therefore need to transition it to the D3D12_RESOURCE_STATE_COPY_DEST so that the contents of the raytracing output can be copied to it. The copy itself is performed by ID3D12GraphicsCommandList::CopyResource. Once the copy is made, the render target is transitioned back to the D3D12_RESOURCE_STATE_RENDER_TARGET for display.
 
+```c++
 // The raytracing output needs to be copied to the actual render target used
 // for display. For this, we need to transition the raytracing output from a
 // UAV to a copy source, and the render target buffer to a copy destination.
 // We can then do the actual copy, before transitioning the render target
 // buffer into a render target, that will be then used to display the image
-transition = CD3DX12_RESOURCE_BARRIER::Transition( m_outputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+transition = CD3DX12_RESOURCE_BARRIER::Transition(m_outputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 m_commandList->ResourceBarrier(1, &transition);
-transition = CD3DX12_RESOURCE_BARRIER::Transition( m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
+transition = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
 m_commandList->ResourceBarrier(1, &transition);
+
 m_commandList->CopyResource(m_renderTargets[m_frameIndex].Get(), m_outputResource.Get());
-transition = CD3DX12_RESOURCE_BARRIER::Transition( m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+transition = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
 m_commandList->ResourceBarrier(1, &transition);
+```
+
 The base of the raytracing is now in place: the raytracing pipeline is fully setup, and DispatchRays invokes the ray generation shader for each pixel of the image. Since that ray generation shader only writes a solid color to the raytracing output buffer, the result should look like this:
 
 Raster		Raytrace
