@@ -33,11 +33,14 @@ There are many samples for DirectX 12 under Microsoft GitHub, but for this examp
 ### HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) the HelloTriangle Zip
 ### !!! Note: HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) Download the HelloTriangle Zip
 Make sure that you have the latest Windows SDK installed
+
 Open the solution, build and run.
 
-Figure 1: The result of the HelloTriangle from Microsoft
+![Figure 1: The result of the HelloTriangle from Microsoft](1.png)
+The result of the HelloTriangle from Microsoft
+
 Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
-!!! Warning: Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
+### !!! Warning: Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
 
 ## 5. DXR Utilities
 In the following tutorial, we will use some utility functions that are abstracting some really verbose implementation. The implementation of those abstractions, available here, is fully documented and should help clarifying the concepts of DXR.
