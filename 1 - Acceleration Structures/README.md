@@ -3,8 +3,9 @@
 ## 7. Overview of the System
 Raytracing using DXR requires 3 main building blocks. The acceleration structures store the geometric information to optimize the search for ray intersection points, and are separated into the bottom-level (BLAS) and top-level (TLAS). The raytracing pipeline contains the compiled programs along with the function names associated to each shader program, as well as a description of how those shaders exchange data. Finally, the shader binding table is linking all of those pieces together by indicating which shader programs are executed for which geometry, and which resources are associated with it.
 
+![](3.PNG) 
+Figure 3: Overview of raytracing building blocks
 
-![Figure 3:](3.PNG) Overview of raytracing building blocks
 To facilitate the first contact with DXR, the helper classes we added previously directly map to those main blocks.
 
 ## 8. Acceleration Structure
