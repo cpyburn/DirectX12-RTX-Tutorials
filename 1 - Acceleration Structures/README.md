@@ -168,15 +168,59 @@ void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3
 ## 8.3 CreateAccelerationStructures
 The CreateAccelerationStructures function calls AS builders for the bottom and the top, and store the generated structures. Note that while we only keep resulting BLAS of the triangle and discard the scratch space, we store all buffers for the TLAS into m_topLevelASBuffers in anticipation of the handling of dynamic scenes, where the scratch space will be used repeatedly. This method first fills the command list with the build orders for the bottom-level acceleration structures. For each BLAS, the helper introduces a resource barrier D3D12_RESOURCE_BARRIER_TYPE_UAV to ensure the BLAS can be queried within the same command list. This is required as the top-level AS is also built in that command list. After enqueuing the AS build calls, we execute the command list immediately by calling ExecuteCommandLists and using a fence to flush the command list before starting rendering.
 
-//-----------------------------------------------------------------------------
+```c++
 //
 // Combine the BLAS and TLAS builds to construct the entire acceleration
 // structure required to raytrace the scene
 //
-void D3D12HelloTriangle::CreateAccelerationStructures() { // Build the bottom AS from the Triangle vertex buffer AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({{m_vertexBuffer.Get(), 3}}); // Just one instance for now m_instances = {{bottomLevelBuffers.pResult, XMMatrixIdentity()}}; CreateTopLevelAS(m_instances); // Flush the command list and wait for it to finish m_commandList->Close(); ID3D12CommandList *ppCommandLists[] = {m_commandList.Get()}; m_commandQueue->ExecuteCommandLists(1, ppCommandLists); m_fenceValue++; m_commandQueue->Signal(m_fence.Get(), m_fenceValue); m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent); WaitForSingleObject(m_fenceEvent, INFINITE); // Once the command list is finished executing, reset it to be reused for // rendering ThrowIfFailed( m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get())); // Store the AS buffers. The rest of the buffers will be released once we exit // the function m_bottomLevelAS = bottomLevelBuffers.pResult;
+void D3D12HelloTriangle::CreateAccelerationStructures() 
+{
+	// Build the bottom AS from the Triangle vertex buffer
+	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ {m_vertexBuffer.Get(), 3} });
+
+	// Just one instance for now
+	m_instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()} };
+	CreateTopLevelAS(m_instances);
+
+	// Flush the command list and wait for it to finish
+	m_commandList->Close();
+	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
+	m_fenceValue++;
+	m_commandQueue->Signal(m_fence.Get(), m_fenceValue);
+
+	m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent);
+	WaitForSingleObject(m_fenceEvent, INFINITE);
+
+	// Once the command list is finished executing, reset it to be reused for
+	// rendering
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+
+	// Store the AS buffers. The rest of the buffers will be released once we exit
+	// the function
+	m_bottomLevelAS = bottomLevelBuffers.pResult;
 }
-OnInit()
+```
+
+## 8.4 OnInit()
 We can now add the call to create the acceleration structures. The method should look like this
 
-void D3D12HelloTriangle::OnInit() { LoadPipeline(); LoadAssets(); // Check the raytracing capabilities of the device CheckRaytracingSupport(); // Setup the acceleration structures (AS) for raytracing. When setting up // geometry, each bottom-level AS has its own transform matrix. CreateAccelerationStructures(); // Command lists are created in the recording state, but there is // nothing to record yet. The main loop expects it to be closed, so // close it now. ThrowIfFailed(m_commandList->Close());
+```c++
+void D3D12HelloTriangle::OnInit()
+{
+	LoadPipeline();
+	LoadAssets();
+
+	// Check the raytracing capabilities of the device
+	CheckRaytracingSupport();
+
+	// Setup the acceleration structures (AS) for raytracing. When setting up
+	// geometry, each bottom-level AS has its own transform matrix.
+	CreateAccelerationStructures();
+
+	// Command lists are created in the recording state, but there is
+	// nothing to record yet. The main loop expects it to be closed, so
+	// close it now.
+	ThrowIfFailed(m_commandList->Close()); // 6.2
 }
+```
