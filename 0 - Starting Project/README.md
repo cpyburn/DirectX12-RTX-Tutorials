@@ -1,8 +1,8 @@
 # DirectX-RTX-Tutorials 0
 This is the starting point of this [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
-### I do not take credit for this work.  Credit goes to Martin-Karl Lefrançois and Pascal Gautron. 
-### I am only learning the tutorials AND filling in the gaps in explaination and fixing broken code
-### This goes up to step 6.7
+### Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
+### I am only filling in the gaps in explaination and fixing broken code
+### This goes up to step 6.7 
 
 ## Fixed:
 * logic_error by adding #include < stdexcept >
