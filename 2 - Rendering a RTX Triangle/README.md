@@ -3,6 +3,15 @@
 ## 9. On to Rendering
 Welcome to Part 2 of the DXR ray tracing tutorial. Part 1 showed you how to set up your Windows 10 programming environment to support writing DXR ray tracing applications. Now we take the sample application used in Part 1 to add ray tracing.
 
+## 9.1 Fixing errors in the ShaderBindingTableGenerator.cpp
+
+D3D12 ERROR: ID3D12CommandList::DispatchRays: pDesc->HitGroupTable.StartAddress must be aligned to 64 bytes (D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT) and .StrideInBytes must be aligned to 32 bytes (D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT). [ EXECUTION ERROR #1161: DISPATCH_RAYS_INVALID]
+
+```c++
+line 84:   	m_progIdSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+line 246:	entrySize = ROUND_UP(entrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+```
+
 ## 10. Shading Pipeline
 When creating rasterization shaders with DirectX12, the application compiles them into executable shaders, which are bound to the rasterization pipeline. All objects rendered using this pipeline will use those shaders. To render an image with several types of shaders, the rasterization pipeline needs to be set to use each before calling the draw commands. In a raytracing context, a ray traced to the scene can hit any object and thus trigger the execution of any shader. Instead of using one shader executable at a time, we now need to have all shaders available at once. The pipeline then contains all the shader required to render the scene, and information on how to execute it. To be able to raytrace some geometry, a DXR pipeline typically uses at least those 3 HLSL shader program types:
 
