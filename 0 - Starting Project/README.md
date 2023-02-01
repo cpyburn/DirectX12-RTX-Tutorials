@@ -5,8 +5,8 @@ This is the starting point of this [Tutorial](https://developer.nvidia.com/rtx/r
 ### This goes up to step 6.7
 
 ## Fixed:
-* logic_error by adding #include <stdexcept>
-* wstring by adding #include <xstring>
+* logic_error by adding "#include <stdexcept>"
+* wstring by adding "#include <xstring>"
 
 ## 1. NVIDIA DXR Sample
 Welcome to Part 1 of the DirectX 12 DXR ray tracing tutorial. The focus of these documents and the provided code is to showcase a basic integration of raytracing within an existing DirectX 12 sample, using the new DXR API. Note that for educational purposes all the code is contained in a very small set of files. A real integration would require additional levels of abstraction.
