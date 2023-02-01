@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/0 - Starting Project/source/obj/x64/Debug
+/0 - Starting Project/source/.vs/D3D12HelloTriangle
+/.vs/DirectX-RTX-Tutorials/v17
+/.vs/DirectX-RTX-Tutorials/FileContentIndex
+/.vs
