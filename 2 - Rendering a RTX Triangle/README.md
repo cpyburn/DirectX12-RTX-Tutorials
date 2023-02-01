@@ -612,11 +612,17 @@ m_commandList->ResourceBarrier(1, &transition);
 
 The base of the raytracing is now in place: the raytracing pipeline is fully setup, and DispatchRays invokes the ray generation shader for each pixel of the image. Since that ray generation shader only writes a solid color to the raytracing output buffer, the result should look like this:
 
-Raster		Raytrace
-	↔	
-Figure 2: Alternating between rasterization and raytracing using the spacebar
+Raster
+
+![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/0%20-%20Starting%20Project/1.PNG)
+
+Raytrace
+
+![](13.1.PNG)
+
+### Alternating between rasterization and raytracing using the spacebar
 Open RayGen.hlsl and change the value of the return.
-!!! Tip Open RayGen.hlsl and change the value of the return.
+
 Simple RayGen and Hit shader
 So far, when we are calling DispatchRays(), the ray generation shader RayGen() is called, but no rays are created. We will change this by adding an orthogonal view and then change the hit shader to look like the rasterized triangle.
 
