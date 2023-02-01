@@ -16,8 +16,9 @@ Two more shader types can optionally be used:
 
 * The any hit shader is executed on each potential intersection: when searching for the hit point closest to the ray origin, several candidates may be found on the way. The any hit shader can typically be used to efficiently implement alpha-testing. If the alpha test fails, the ray traversal can continue without having to call TraceRay() again. The built-in any hit shader is simply a pass-trough returning the intersection to the traversal engine that will determine which potential intersection is the closest.
 
-Figure 1:![](9.PNG) The Raytracing Pipeline
-
+Figure 1:
+![](9.PNG) 
+The Raytracing Pipeline
 
 In this tutorial we will create a pipeline containing only the 3 mandatory shader programs: a single ray generation, single miss and a single closest hit. This is done by first compiling each shader program into a DirectX Intermediate Language (DXIL) library using the DirectX Compiler IDxcCompiler with the target lib_6_3. This target has been introduced with DXR. Such libraries will be linked together within the raytracing pipeline, which will be able to route the intersection calculations to the right hit shaders. To be able to focus on the pipeline generation, we provide simplistic shaders:
 
