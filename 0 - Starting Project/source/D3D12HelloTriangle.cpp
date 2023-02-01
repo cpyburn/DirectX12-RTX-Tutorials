@@ -30,7 +30,7 @@ void D3D12HelloTriangle::OnInit()
 	// Command lists are created in the recording state, but there is
 	// nothing to record yet. The main loop expects it to be closed, so
 	// close it now.
-	//ThrowIfFailed(m_commandList->Close()); // 6.2
+	ThrowIfFailed(m_commandList->Close()); // 6.2
 }
 
 // Load the rendering pipeline dependencies.
@@ -199,7 +199,7 @@ void D3D12HelloTriangle::LoadAssets()
 
 	// Command lists are created in the recording state, but there is nothing
 	// to record yet. The main loop expects it to be closed, so close it now.
-	ThrowIfFailed(m_commandList->Close());
+	//ThrowIfFailed(m_commandList->Close()); // 6.2
 
 	// Create the vertex buffer.
 	{
