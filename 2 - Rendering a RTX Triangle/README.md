@@ -278,10 +278,10 @@ Add the call at the end of the function to create the raytracing pipeline
 CreateRaytracingPipeline();
 ```
 
-## 11 Creating Resources
+## 11. Creating Resources
 Unlike the rasterization, the raytracing process does not write directly to the render target: instead, it writes its results into a buffer bound as an unordered access view (UAV), which is then copied to the render target for display. Also, any shader program that calls TraceRay() needs to be able to access the top-level acceleration structure (TLAS). As shown in the Shading Pipeline section, the root signature of the ray generation shader defines the access to both buffers as two ranges within a resource heap. In this section we will first create the raytracing output buffer m_outputResource, and then create the heap m_srvUavHeap referencing both that buffer and the TLAS. Add the following declaration in D3D12HelloTriangle.h
 
-```
+```c++
 // 11 #DXR
 void CreateRaytracingOutputBuffer();
 void CreateShaderResourceHeap();
@@ -292,23 +292,78 @@ ComPtr<ID3D12DescriptorHeap> m_srvUavHeap;
 ## 11.1 CreateRaytracingOutputBuffer
 The method below allocates the buffer holding the raytracing output using ID3D12Device::CreateCommittedResource, with the same size as the output image. This buffer is initialized in the copy source state D3D12_RESOURCE_STATE_COPY_SOURCE, which is the state assumed by the PopulateCommandList method. That method will transition the buffer to a D3D12_RESOURCE_STATE_UNORDERED_ACCESS, perform raytracing and transition back to D3D12_RESOURCE_STATE_COPY_SOURCE so that the contents of the buffer can be copied to the render target using ID3D12GraphicsCommandList::CopyResource. It is then important that the raytracing output buffer is created with the D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS flag.
 
-```
+```c++
+// 11.1
+//-----------------------------------------------------------------------------
+//
+// Allocate the buffer holding the raytracing output, with the same size as the
+// output image
+//
+void D3D12HelloTriangle::CreateRaytracingOutputBuffer() 
+{
+	D3D12_RESOURCE_DESC resDesc = {};
+	resDesc.DepthOrArraySize = 1;
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	// The backbuffer is actually DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, but sRGB
+	// formats cannot be used with UAVs. For accuracy we should convert to sRGB
+	// ourselves in the shader
+	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
+	resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	resDesc.Width = GetWidth();
+	resDesc.Height = GetHeight();
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resDesc.MipLevels = 1;
+	resDesc.SampleDesc.Count = 1;
+	ThrowIfFailed(m_device->CreateCommittedResource(&nv_helpers_dx12::kDefaultHeapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&m_outputResource)));
+}
 ```
 
 # 11.2 CreateShaderResourceHeap
 The data accessible to all shaders is typically referenced in a heap bound before rendering. This heap contains a predefined number of slots, each of them containing a view on an object in GPU memory. In practice, the heap is a memory area containing views on common resources. Such views are directly written into the heap memory using ID3D12Device::Create*View calls. In this tutorial the heap only contains two entries: the raytracing output buffer accessed as a UAV, and the top-level acceleration structure which is a shader resource (SRV) with a specific dimension flag D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE.
 
+```c++
+// 11.2
 //-----------------------------------------------------------------------------
 //
 // Create the main heap used by the shaders, which will give access to the
 // raytracing output and the top-level acceleration structure
 //
-void D3D12HelloTriangle::CreateShaderResourceHeap() { // Create a SRV/UAV/CBV descriptor heap. We need 2 entries - 1 UAV for the // raytracing output and 1 SRV for the TLAS m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 2, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true); // Get a handle to the heap memory on the CPU side, to be able to write the // descriptors directly D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart(); // Create the UAV. Based on the root signature we created it is the first // entry. The Create*View methods write the view information directly into // srvHandle D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {}; uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D; m_device->CreateUnorderedAccessView(m_outputResource.Get(), nullptr, &uavDesc, srvHandle); // Add the Top Level AS SRV right after the raytracing output buffer srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc; srvDesc.Format = DXGI_FORMAT_UNKNOWN; srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE; srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING; srvDesc.RaytracingAccelerationStructure.Location = m_topLevelASBuffers.pResult->GetGPUVirtualAddress(); // Write the acceleration structure view in the heap m_device->CreateShaderResourceView(nullptr, &srvDesc, srvHandle);
+void D3D12HelloTriangle::CreateShaderResourceHeap() 
+{
+	// Create a SRV/UAV/CBV descriptor heap. We need 2 entries - 1 UAV for the
+	// raytracing output and 1 SRV for the TLAS
+	m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_device.Get(), 2, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+
+	// Get a handle to the heap memory on the CPU side, to be able to write the
+	// descriptors directly
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart();
+
+	// Create the UAV. Based on the root signature we created it is the first
+	// entry. The Create*View methods write the view information directly into
+	// srvHandle
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	m_device->CreateUnorderedAccessView(m_outputResource.Get(), nullptr, &uavDesc, srvHandle);
+
+	// Add the Top Level AS SRV right after the raytracing output buffer
+	srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.RaytracingAccelerationStructure.Location = m_topLevelASBuffers.pResult->GetGPUVirtualAddress();
+	// Write the acceleration structure view in the heap
+	m_device->CreateShaderResourceView(nullptr, &srvDesc, srvHandle);
 }
-OnInit
+```
+
+## 11.3 OnInit
 Add the creation of the raytracing output buffer and the resource heap at the end of OnInit:
 
+```c++
+// 11.3
 // Allocate the buffer storing the raytracing output, with the same dimensions
 // as the target image
 CreateRaytracingOutputBuffer(); // #DXR
@@ -316,405 +371,45 @@ CreateRaytracingOutputBuffer(); // #DXR
 // UAV), and create the heap referencing the resources used by the raytracing,
 // such as the acceleration structure
 CreateShaderResourceHeap(); // #DXR
-Shader Binding Table
+```
+
+## 12. Shader Binding Table
 The Shader Binding Table is where all programs and TLAS are bind together to know which program to execute. There is one RayGen at least one Miss, followed by the Hit. There should be n entries for the Hit, up to the maximum index passed to the instance description parameter InstanceContributionToHitGroupIndex. In a typical rasterization setup, a current shader and its associated resources are bound prior to drawing the corresponding objects, then another shader and resource set can be bound for some other objects, and so on. Since raytracing can hit any surface of the scene at any time, it is impossible to know in advance which shaders need to be bound. Therefore, the Shader Binding Table (SBT) is an array of SBT entries holding information on the location of shaders and their resources for each object.
 
-SBT Entry
+## 12.1 SBT Entry
 A SBT entry consists of a header and data section. The header stores a shader identifier, while the data section provides pointers and raw data to the shader, according to the layout described in the root signature of the shader. In D3D12HelloTriangle.h add the following include
 
+```
+// 12.1
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
+```
+
 This file contains our SBT helper that eases the SBT creation process and enforces consistency between the SBT layout and the later raytracing calls. Internally the Add* methods collect the names of the shader programs associated with the pointers of their input resources in GPU memory. The Generate call maps the input buffer and, for each collected entry, sets the corresponding shader identifier using ID3D12StateObjectProperties::GetShaderIdentifier() and copies its resource pointers afterwards. The helper first copies the ray generation programs, then the miss programs, and finally the hit groups. And add the following declaration:
 
-// #DXR
+```c++
+// 12.2 #DXR
 void CreateShaderBindingTable();
 nv_helpers_dx12::ShaderBindingTableGenerator m_sbtHelper;
-ComPtr<id3d12resource> m_sbtStorage;
-CreateShaderBindingTable
+ComPtr<ID3D12Resource> m_sbtStorage;
+```
+
+## 12.2 CreateShaderBindingTable
 The Shader Binding Table (SBT) is the cornerstone of the raytracing setup: it links the geometry instances to their corresponding hit groups, and binds the resources to the raytracing shader program according to their root signatures. In this tutorial, we have a scene containing a single instance. The Shader Binding Table would then have 3 entries: one for the ray generation program, one for the miss program, and one for the hit group. The ray generation needs to access two external resources: the raytracing output buffer and the top-level acceleration structure. The root signature of the ray generation shader requires both resources to be available in the currently bound heap. Consequently, the shader only needs to have a pointer to the beginning of the heap. The hit group and the miss program do not use any external data, and therefore have an empty root signature. The SBT is then laid out as follows:
-R
-a
-y
-G
-e
-n
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-M
-i
-s
-s
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-i
-t
-G
-r
-o
-u
-p
-|
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
+
+![](12.2.PNG)
+
 When starting the raytracing process, the identifier of the ray generation program will be used to execute its entry point for each pixel. The pointer to the heap will allow the shader to find the required resources. When the ray generation program shoots a ray, the heap pointer will be used to find the location of the top-level acceleration structure in GPU memory and trigger the tracing itself. The ray may miss all geometry, in which case the SBT will be used to find the miss shader identifier and execute the corresponding code. If the ray hits the geometry, the hit group identifier will be used to find the shaders associated to the hit group: intersection, any hit and closest hit. In order, those shaders will be executed, and the result sent to the ray generation shader. The ray generation shader can then access the raytracing output buffer from the heap, and write its result. If the scene contains several objects, with different hit groups, the SBT will contain all the hit groups and their resources. As an example, we could have 3 objects, each accessing some camera data in the main heap. Objects 0 and 1 would have each their own texture, while Object 2 would not have one. The SBT would then have this structure:
-R
-a
-y
-G
-e
-n
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-M
-i
-s
-s
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-i
-t
-G
-r
-o
-u
-p
-0
-|
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-T
-e
-x
-t
-u
-r
-e
-0
-P
-o
-i
-n
-t
-e
-r
-|
-H
-i
-t
-G
-r
-o
-u
-p
-1
-|
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-T
-e
-x
-t
-u
-r
-e
-1
-P
-o
-i
-n
-t
-e
-r
-|
-H
-i
-t
-G
-r
-o
-u
-p
-2
-|
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-/
-/
-|
-|
+
+![](12.2.1.PNG)
+
 Note that HitGroup2 does not access any texture. However, the alignment requirements of the SBT force each program type (ray generation, miss, hit group) to have a fixed entry size for all of its members. The size of the entry for a given program type is then driven by the size of the largest root signature within that type: 1 for the ray generation, 0 for the miss, and 2 for the hit group. Therefore, the SBT entry is padded to respect the alignment. In many practical the raytracing process uses multiple ray types, for example to differentiate between regular rays and shadow rays. In such cases, the SBT would contain one hit group per ray type, for each object type. Going back to a sample with a single object for conciseness, adding a second ray type simply requires adding the corresponding hit group in the SBT:
-R
-a
-y
-G
-e
-n
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-e
-a
-p
-S
-t
-a
-r
-t
-|
-P
-o
-i
-n
-t
-e
-r
-|
-*
-M
-i
-s
-s
-|
-*
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-H
-i
-t
-G
-r
-o
-u
-p
-|
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
-S
-h
-a
-d
-o
-w
-G
-r
-o
-u
-p
-I
-d
-e
-n
-t
-i
-f
-i
-e
-r
-|
+
+![](12.2.2.PNG)
+
 How the pipeline associates a geometry with a hit group depends on the hit group index used when adding an instance to the top-level AS helper class. Internally, this index maps to the InstanceContributionToHitGroupIndex of the D3D12_RAYTRACING_INSTANCE_DESC descriptor. Getting back to our sample, the ray generation only needs to access the heap pointer while the other programs do not have any resource to access. We first reset the SBT, by anticipation of potential dynamic updates. We then fetch the handle on the GPU memory where the descriptors of the heap are stored using GetGPUDescriptorHandleForHeapStart
 
+```c++
+// 12.2
 //-----------------------------------------------------------------------------
 //
 // The Shader Binding Table (SBT) is the cornerstone of the raytracing setup:
@@ -724,10 +419,54 @@ How the pipeline associates a geometry with a hit group depends on the hit group
 // contains the ray generation shader, the miss shaders, then the hit groups.
 // Using the helper class, those can be specified in arbitrary order.
 //
-void D3D12HelloTriangle::CreateShaderBindingTable() { // The SBT helper class collects calls to Add*Program. If called several // times, the helper must be emptied before re-adding shaders. m_sbtHelper.Reset(); // The pointer to the beginning of the heap is the only parameter required by // shaders without root parameters D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_srvUavHeap->GetGPUDescriptorHandleForHeapStart();
+void D3D12HelloTriangle::CreateShaderBindingTable() 
+{
+	// The SBT helper class collects calls to Add*Program.  If called several
+	// times, the helper must be emptied before re-adding shaders.
+	m_sbtHelper.Reset();
+
+	// The pointer to the beginning of the heap is the only parameter required by
+	// shaders without root parameters
+	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_srvUavHeap->GetGPUDescriptorHandleForHeapStart();
+
+	// The helper treats both root parameter pointers and heap pointers as void*,
+	// while DX12 uses the
+	// D3D12_GPU_DESCRIPTOR_HANDLE to define heap pointers. The pointer in this
+	// struct is a UINT64, which then has to be reinterpreted as a pointer.
+	auto heapPointer = reinterpret_cast<UINT64*>(srvUavHeapHandle.ptr);
+
+	// The ray generation only uses heap data
+	m_sbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
+
+	// The miss and hit shaders do not access any external resources: instead they
+	// communicate their results through the ray payload
+	m_sbtHelper.AddMissProgram(L"Miss", {});
+
+	// Adding the triangle hit shader
+	m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_vertexBuffer->GetGPUVirtualAddress()) });
+
+	// Compute the size of the SBT given the number of shaders and their
+	// parameters
+	uint32_t sbtSize = m_sbtHelper.ComputeSBTSize();
+
+	// Create the SBT on the upload heap. This is required as the helper will use
+	// mapping to write the SBT contents. After the SBT compilation it could be
+	// copied to the default heap for performance.
+	m_sbtStorage = nv_helpers_dx12::CreateBuffer(m_device.Get(), sbtSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+	if (!m_sbtStorage) {
+		throw std::logic_error("Could not allocate the shader binding table");
+	}
+	// Compile the SBT from the shader and parameters info
+	m_sbtHelper.Generate(m_sbtStorage.Get(), m_rtStateObjectProps.Get());
+}
+```
+
 The ptr member of the GPU handle on the heap memory has a UINT64 type, even though it represents a pointer. Since the helper class only takes pointers to define shader resources, we need to cast the 64-bit integer into a 64-bit pointer.
 
-(srvUavHeapHandle.ptr);">~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```c++
+srvUavHeapHandle.ptr
+```
+
 We can now add the various programs used in our example: according to its root signature, the ray generation shader needs to access
 the raytracing output buffer and the top-level acceleration structure referenced in the heap. Therefore, it
 takes a single resource pointer towards the beginning of the heap data. The miss shader and the hit group
@@ -737,16 +476,29 @@ arbitrary order. For example, miss programs can be added before or after ray gen
 affecting the result.
 However, within a given type (say, the hit groups), the order in which they are added
 is important. It needs to correspond to the `InstanceContributionToHitGroupIndex` value used when adding
-instances to the top-level acceleration structure: for example, an instance having `InstanceContributionToHitGroupIndex==0`
+instances to the top-level acceleration structure: for example, an instance having 
+```c++
+InstanceContributionToHitGroupIndex==0
+```
 needs to have its hit group added first in the SBT.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ // The ray generation only uses heap data m_sbtHelper.AddRayGenerationProgram(L"RayGen", {heapPointer}); // The miss and hit shaders do not access any external resources: instead they // communicate their results through the ray payload m_sbtHelper.AddMissProgram(L"Miss", {}); // Adding the triangle hit shader m_sbtHelper.AddHitGroup(L"HitGroup", {});
+
+```c++
+// The ray generation only uses heap data
+m_sbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
+
+// The miss and hit shaders do not access any external resources: instead they
+// communicate their results through the ray payload
+m_sbtHelper.AddMissProgram(L"Miss", {});
+
+// Adding the triangle hit shader
+m_sbtHelper.AddHitGroup(L"HitGroup", {});
+```
+
 From the number of programs and hit groups and their respective numbers of parameters, the helper can compute the size of the resulting SBT. For each shader type this method simply calculates the largest number of parameters of the shaders of that type. From this, and the size of a shader identifier, the final SBT size can be obtained. We then allocate the SBT on the upload heap. This is important as the SBT generation is done through buffer mapping.
 
-}
 After adding the shader program names to the SBT entries, the Generate call of the shader binding table helper simply maps the SBT buffer, fetches the shader program identifiers from the provided names, and each entry as the program identifier followed by its set of resource pointers.
 
-}
-OnInit()
+## 12.3 OnInit()
 Add the following line to call the creation of the SBT.
 
 // Create the shader binding table and indicating which shaders
