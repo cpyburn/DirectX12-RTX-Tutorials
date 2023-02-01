@@ -41,7 +41,7 @@ Errors on compilation If you have a compilation issue, check that you have the l
 In the following tutorial, we will use some utility functions that are abstracting some really verbose implementation. The implementation of those abstractions, available here, is fully documented and should help clarifying the concepts of DXR.
 
 ### DXR Helpers (Download) Download the utility classes and copy to the project directory.
-!!! Note: DXR Helpers (Download) Download the utility classes and copy to the project directory.
+### !!! Note: DXR Helpers (Download) Download the utility classes and copy to the project directory.
 Add the utility files to the solution
 Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
 Add $(ProjectDir) to the project include C/C++> General> Additional Include Directories
