@@ -65,7 +65,7 @@ Our sample uses the simplest APIs of DirectX12, exposed in the ID3D12Device and 
 
 ```c++
 	ComPtr<ID3D12Device5> m_device; // renamed from ID3D12Device to ID3D12Device5
-	ComPtr<ID3D12GraphicsCommandList> m_commandList; // renamed from ID3D12GraphicsCommandList to ID3D12GraphicsCommandList4
+	ComPtr<ID3D12GraphicsCommandList4> m_commandList; // renamed from ID3D12GraphicsCommandList to ID3D12GraphicsCommandList4
   ```
 
 ## Checking for Raytracing Support
