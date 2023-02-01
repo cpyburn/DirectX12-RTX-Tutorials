@@ -1,6 +1,7 @@
 # DirectX-RTX-Tutorials 0
 This is the starting point of this [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
-### I do not take credit for this work at all, I am only learning the tutorials myself AND filling in all the gaps that I did not find or were broken in the tutorials
+### I do not take credit for this work.  Credit goes to Martin-Karl Lefrançois and Pascal Gautron. 
+### I am only learning the tutorials AND filling in the gaps in explaination and fixing broken code
 ### This goes up to step 6.7
 
 ## Fixed:
@@ -30,7 +31,7 @@ Before going further: make sure you are running Windows 10 Version 1809 or later
 There are many samples for DirectX 12 under Microsoft GitHub, but for this example, you only need HelloTriangle.
 
 ### HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) the HelloTriangle Zip
-### !!! Note: HelloTriangle (Download) Download the HelloTriangle Zip
+### !!! Note: HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) Download the HelloTriangle Zip
 Make sure that you have the latest Windows SDK installed
 Open the solution, build and run.
 
@@ -41,11 +42,11 @@ Errors on compilation If you have a compilation issue, check that you have the l
 ## 5. DXR Utilities
 In the following tutorial, we will use some utility functions that are abstracting some really verbose implementation. The implementation of those abstractions, available here, is fully documented and should help clarifying the concepts of DXR.
 
-### DXR Helpers (Download) Download the utility classes and copy to the project directory.
-### !!! Note: DXR Helpers (Download) Download the utility classes and copy to the project directory.
-Add the utility files to the solution
-Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
-Add $(ProjectDir) to the project include C/C++> General> Additional Include Directories
+### DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
+### !!! Note: DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
+1. Add the utility files to the solution
+2. Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
+3. Add $(ProjectDir) to the project include C/C++> General> Additional Include Directories
 After each step, you should be able to run the sample. At this point, nothing visual has changed.
 !!! Tip After each step, you should be able to run the sample. At this point, nothing visual has changed.
 Enabling Raytracing Capabilities
