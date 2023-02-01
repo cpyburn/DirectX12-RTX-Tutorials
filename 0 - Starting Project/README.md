@@ -36,7 +36,7 @@ Make sure that you have the latest Windows SDK installed
 
 Open the solution, build and run.
 
-![Figure 1: The result of the HelloTriangle from Microsoft](1.png)
+![Figure 1: The result of the HelloTriangle from Microsoft](1.PNG)
 The result of the HelloTriangle from Microsoft
 
 Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
