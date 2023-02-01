@@ -31,7 +31,6 @@ Before going further: make sure you are running Windows 10 Version 1809 or later
 There are many samples for DirectX 12 under Microsoft GitHub, but for this example, you only need HelloTriangle.
 
 ### HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) the HelloTriangle Zip
-### !!! Note: HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) Download the HelloTriangle Zip
 Make sure that you have the latest Windows SDK installed
 
 Open the solution, build and run.
@@ -39,19 +38,20 @@ Open the solution, build and run.
 ![Figure 1: The result of the HelloTriangle from Microsoft](1.PNG)
 The result of the HelloTriangle from Microsoft
 
-Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
-### !!! Warning: Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
+### Errors on compilation If you have a compilation issue, check that you have the latest Windows SDK installed. Right-Click the solution and select “Retarget solution” to the latest SDK.
 
 ## 5. DXR Utilities
 In the following tutorial, we will use some utility functions that are abstracting some really verbose implementation. The implementation of those abstractions, available here, is fully documented and should help clarifying the concepts of DXR.
 
 ### DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
-### !!! Note: DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
+
 1. Add the utility files to the solution
 2. Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
+[!Project Properties](2.PNG)
 3. Add $(ProjectDir) to the project include C/C++> General> Additional Include Directories
-After each step, you should be able to run the sample. At this point, nothing visual has changed.
-!!! Tip After each step, you should be able to run the sample. At this point, nothing visual has changed.
+
+### After each step, you should be able to run the sample. At this point, nothing visual has changed.
+
 Enabling Raytracing Capabilities
 Raytracing-enabled Device and Command List
 Our sample uses the simplest APIs of DirectX12, exposed in the ID3D12Device and ID3D12GraphicsCommandList classes. The raytracing APIs are much more advanced and recent, and were included in the ID3D12Device5 and ID3D12GraphicsCommandList4 classes. In D3D12HelloTriangle.h, we replace the declaration of m_device and m_commandList accordingly:
