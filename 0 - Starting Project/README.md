@@ -28,8 +28,8 @@ Before going further: make sure you are running Windows 10 Version 1809 or later
 ## 4. Starting point: Hello Triangle
 There are many samples for DirectX 12 under Microsoft GitHub, but for this example, you only need HelloTriangle.
 
-HelloTriangle (Download) Download the HelloTriangle Zip
-!!! Note: HelloTriangle (Download) Download the HelloTriangle Zip
+### HelloTriangle [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/HelloTriangle.zip) the HelloTriangle Zip
+### !!! Note: HelloTriangle (Download) Download the HelloTriangle Zip
 Make sure that you have the latest Windows SDK installed
 Open the solution, build and run.
 
