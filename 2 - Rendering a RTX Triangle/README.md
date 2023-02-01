@@ -24,7 +24,7 @@ The Raytracing Pipeline
 
 In this tutorial we will create a pipeline containing only the 3 mandatory shader programs: a single ray generation, single miss and a single closest hit. This is done by first compiling each shader program into a DirectX Intermediate Language (DXIL) library using the DirectX Compiler IDxcCompiler with the target lib_6_3. This target has been introduced with DXR. Such libraries will be linked together within the raytracing pipeline, which will be able to route the intersection calculations to the right hit shaders. To be able to focus on the pipeline generation, we provide simplistic shaders:
 
-### Shaders [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/Shaders.zip) the shaders and extract the content to the main folder.
+### Shaders - [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/Shaders.zip) the shaders and extract the content to the main folder.
 ### Adding to the Solution If you are adding the shaders to the solution, you need to exclude them from compilation otherwise you will get compilation errors.
 
 This archive contains 4 files:
