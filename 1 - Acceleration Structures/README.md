@@ -122,16 +122,50 @@ D3D12HelloTriangle::AccelerationStructureBuffers D3D12HelloTriangle::CreateBotto
 ## 8.2 CreateTopLevelAS
 The top level acceleration structure (TLAS) can be seen as an acceleration structure over acceleration structures, which aims at optimizing the search for ray intersections in any of the underlying BLAS. A TLAS can instantiate the same BLAS multiple times, using per-instance matrices to render them at various world-space positions. In the example, we call CreateTopLevelAS and pass an array of two elements (pair). The first element is the resource pointer to the BLAS, the second is the matrix to position the object. In the Going Further section we will use those matrices to animate the scene by only updating the TLAS and keeping the BLAS fixed, making it useful for rigid-body animations. This method is very similar in structure to CreateBottomLevelAS, with the same 3 steps: gathering the input data, computing the AS buffer sizes, and generating the actual TLAS. However, the TLAS requires an additional buffer holding the descriptions of each instance. The ComputeASBufferSizes method provides the sizes of the scratch and result buffers by calling ID3D12Device5::GetRaytracingAccelerationStructurePrebuildInfo, and computes the size of the instance buffers from the size of the instance descriptor D3D12_RAYTRACING_INSTANCE_DESC and the number of instances. As for the BLAS, the scratch and result buffers are directly allocated in GPU memory, on the default heap. The instance descriptors buffer will need to be mapped within the helper, and has to be allocated on the upload heap. Once the buffers are allocated, the Generate call fills in the instance descriptions buffer and a descriptor of the building work to be done, with a D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL type. This descriptor is then passed to ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure which builds an acceleration structure holding all the instances.
 
+```c++
 //-----------------------------------------------------------------------------
 // Create the main acceleration structure that holds all instances of the scene.
 // Similarly to the bottom-level AS generation, it is done in 3 steps: gathering
 // the instances, computing the memory requirements for the AS, and building the
 // AS itself
 //
-void D3D12HelloTriangle::CreateTopLevelAS( const std::vector<std::pair<comptr<id3d12resource>, DirectX::XMMATRIX>> &instances // pair of bottom level AS and matrix of the instance
-) { // Gather all the instances into the builder helper for (size_t i = 0; i < instances.size(); i++) { m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<uint>(i), static_cast<uint>(0)); } // As for the bottom-level AS, the building the AS requires some scratch space // to store temporary data in addition to the actual AS. In the case of the // top-level AS, the instance descriptors also need to be stored in GPU // memory. This call outputs the memory requirements for each (scratch, // results, instance descriptors) so that the application can allocate the // corresponding memory UINT64 scratchSize, resultSize, instanceDescsSize; m_topLevelASGenerator.ComputeASBufferSizes(m_device.Get(), true, &scratchSize, &resultSize, &instanceDescsSize); // Create the scratch and result buffers. Since the build is all done on GPU, // those can be allocated on the default heap m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer( m_device.Get(), scratchSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nv_helpers_dx12::kDefaultHeapProps); m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer( m_device.Get(), resultSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps); // The buffer describing the instances: ID, shader binding information, // matrices ... Those will be copied into the buffer by the helper through // mapping, so the buffer has to be allocated on the upload heap. m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer( m_device.Get(), instanceDescsSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); // After all the buffers are allocated, or if only an update is required, we // can build the acceleration structure. Note that in the case of the update // we also pass the existing AS as the 'previous' AS, so that it can be // refitted in place. m_topLevelASGenerator.Generate(m_commandList.Get(), m_topLevelASBuffers.pScratch.Get(), m_topLevelASBuffers.pResult.Get(), m_topLevelASBuffers.pInstanceDesc.Get());
+void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances) // pair of bottom level AS and matrix of the instance 
+{
+	// Gather all the instances into the builder helper
+	for (size_t i = 0; i < instances.size(); i++) 
+	{
+		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
+	}
+
+	// As for the bottom-level AS, the building the AS requires some scratch space
+	// to store temporary data in addition to the actual AS. In the case of the
+	// top-level AS, the instance descriptors also need to be stored in GPU
+	// memory. This call outputs the memory requirements for each (scratch,
+	// results, instance descriptors) so that the application can allocate the
+	// corresponding memory
+	UINT64 scratchSize, resultSize, instanceDescsSize;
+
+	m_topLevelASGenerator.ComputeASBufferSizes(m_device.Get(), true, &scratchSize, &resultSize, &instanceDescsSize);
+
+	// Create the scratch and result buffers. Since the build is all done on GPU,
+	// those can be allocated on the default heap
+	m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer(m_device.Get(), scratchSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nv_helpers_dx12::kDefaultHeapProps);
+	m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer(m_device.Get(), resultSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps);
+
+	// The buffer describing the instances: ID, shader binding information,
+	// matrices ... Those will be copied into the buffer by the helper through
+	// mapping, so the buffer has to be allocated on the upload heap.
+	m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer(m_device.Get(), instanceDescsSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	// After all the buffers are allocated, or if only an update is required, we
+	// can build the acceleration structure. Note that in the case of the update
+	// we also pass the existing AS as the 'previous' AS, so that it can be
+	// refitted in place.
+	m_topLevelASGenerator.Generate(m_commandList.Get(), m_topLevelASBuffers.pScratch.Get(), m_topLevelASBuffers.pResult.Get(), m_topLevelASBuffers.pInstanceDesc.Get());
 }
-CreateAccelerationStructures
+```
+
+## 8.3 CreateAccelerationStructures
 The CreateAccelerationStructures function calls AS builders for the bottom and the top, and store the generated structures. Note that while we only keep resulting BLAS of the triangle and discard the scratch space, we store all buffers for the TLAS into m_topLevelASBuffers in anticipation of the handling of dynamic scenes, where the scratch space will be used repeatedly. This method first fills the command list with the build orders for the bottom-level acceleration structures. For each BLAS, the helper introduces a resource barrier D3D12_RESOURCE_BARRIER_TYPE_UAV to ensure the BLAS can be queried within the same command list. This is required as the top-level AS is also built in that command list. After enqueuing the AS build calls, we execute the command list immediately by calling ExecuteCommandLists and using a fence to flush the command list before starting rendering.
 
 //-----------------------------------------------------------------------------
