@@ -53,12 +53,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <Link>
@@ -124,6 +124,12 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DXRHelper.h" />
+    <ClInclude Include="nv_helpers_dx12\BottomLevelASGenerator.h" />
+    <ClInclude Include="nv_helpers_dx12\RaytracingPipelineGenerator.h" />
+    <ClInclude Include="nv_helpers_dx12\RootSignatureGenerator.h" />
+    <ClInclude Include="nv_helpers_dx12\ShaderBindingTableGenerator.h" />
+    <ClInclude Include="nv_helpers_dx12\TopLevelASGenerator.h" />
     <ClInclude Include="Win32Application.h" />
     <ClInclude Include="D3D12HelloTriangle.h" />
     <ClInclude Include="d3dx12.h" />
@@ -132,6 +138,11 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="nv_helpers_dx12\BottomLevelASGenerator.cpp" />
+    <ClCompile Include="nv_helpers_dx12\RaytracingPipelineGenerator.cpp" />
+    <ClCompile Include="nv_helpers_dx12\RootSignatureGenerator.cpp" />
+    <ClCompile Include="nv_helpers_dx12\ShaderBindingTableGenerator.cpp" />
+    <ClCompile Include="nv_helpers_dx12\TopLevelASGenerator.cpp" />
     <ClCompile Include="Win32Application.cpp" />
     <ClCompile Include="D3D12HelloTriangle.cpp" />
     <ClCompile Include="DXSample.cpp" />

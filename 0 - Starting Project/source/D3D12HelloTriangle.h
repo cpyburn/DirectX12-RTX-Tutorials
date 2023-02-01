@@ -45,14 +45,12 @@ private:
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
 	ComPtr<IDXGISwapChain3> m_swapChain;
-	ComPtr<ID3D12Device> m_device;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
-	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	UINT m_rtvDescriptorSize;
 
 	// App resources.
@@ -69,4 +67,13 @@ private:
 	void LoadAssets();
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
+
+	// STEP 6.1
+	ComPtr<ID3D12Device5> m_device; // renamed from ID3D12Device to ID3D12Device5
+	ComPtr<ID3D12GraphicsCommandList> m_commandList; // renamed from ID3D12GraphicsCommandList to ID3D12GraphicsCommandList4
+
+	void CheckRaytracingSupport(); // 6.4
+	bool m_raster = true;
+	virtual void OnKeyUp(UINT8 key); // 6.5
+	
 };
