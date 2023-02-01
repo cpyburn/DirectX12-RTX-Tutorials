@@ -56,7 +56,7 @@ The HelloTriangle example from Nvidia includes a Post-Build Event that looks for
 
 [Download the latest release](https://github.com/microsoft/DirectXShaderCompiler/releases) and extract it to C:\x64\
 
-### DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
+## 5.2 DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
 
 1. Add the utility files to the solution
 2. Select all .cpp and set the precompile flag to Not Using Precompiled Headers 
