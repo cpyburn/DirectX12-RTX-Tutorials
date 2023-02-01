@@ -92,45 +92,61 @@ All the code snippets go into the private section.
 
 ### 6.2 OnInit()
 In the original D3D12HelloTriangle sample, the LoadAssets method creates, initializes and closes the command list. The raytracing setup will require an open command list, and for clarity we prefer adding the methods initializing the raytracing in the OnInit method. Therefore we need to move the following lines from LoadAssets() and put them at the end of the OnInit() function.
-
+```c++
 // Command lists are created in the recording state, but there is
 // nothing to record yet. The main loop expects it to be closed, so
 // close it now.
 ThrowIfFailed(m_commandList->Close());
-LoadPipeline()
+```
+### 6.3 LoadPipeline()
 This is not required, but for consistency you can change the feature level to D3D_FEATURE_LEVEL_12_1.
 
-PopulateCommandList()
+### 6.4PopulateCommandList()
 Find the block clearing the buffer and issuing the draw commands:
-
+```c++
 const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 m_commandList->DrawInstanced(3, 1, 0, 0);
+```
 and replace it by the following, so that we will execute this block only in rasterization mode. In the raytracing path we will simply clear the buffer with a different color for now.
-
-// Record commands.
-// #DXR
+```c++
+// 6.4
 if (m_raster)
-{ const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f }; m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr); m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView); m_commandList->DrawInstanced(3, 1, 0, 0);
+{
+	// Record commands.
+	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	m_commandList->DrawInstanced(3, 1, 0, 0);
 }
 else
-{ const float clearColor[] = { 0.6f, 0.8f, 0.4f, 1.0f }; m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+{
+	const float clearColor[] = { 0.6f, 0.8f, 0.4f, 1.0f }; m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 }
-OnKeyUp()
+```
+
+### 6.5 OnKeyUp()
 Add the following function for toggling between raster and ray-traced modes.
 
-//-----------------------------------------------------------------------------
-//
-//
+```c++
 void D3D12HelloTriangle::OnKeyUp(UINT8 key)
-{ // Alternate between rasterization and raytracing using the spacebar if (key == VK_SPACE) { m_raster = !m_raster; }
+{
+	// Alternate between rasterization and raytracing using the spacebar
+	if (key == VK_SPACE) {
+		m_raster = !m_raster;
+	}
 }
-WindowProc()
+```
+
+### 6.6 WindowProc()
 The following is not required, but it adds the convenience to quit the application by pressing the ESC key. In the Win32Application.cpp file, in WindowProc, add the following code to the WM_KEYDOWN case to quit the application.
+```c++
+if (static_cast<UINT8>(wParam) == VK_ESCAPE) 
+	PostQuitMessage(0);
+```
 
-if (static_cast<uint8>(wParam) == VK_ESCAPE) PostQuitMessage(0);
-Result
+### 6.7 Result
 If everything went well, you should be able to compile, run and when pressing the spacebar, toggle between raster and raytracing mode. We are not doing any raytracing yet, but this will be our starting point.
-
