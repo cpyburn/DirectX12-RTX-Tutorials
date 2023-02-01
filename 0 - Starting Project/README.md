@@ -49,6 +49,13 @@ The result of the HelloTriangle from Microsoft
 ## 5. DXR Utilities
 In the following tutorial, we will use some utility functions that are abstracting some really verbose implementation. The implementation of those abstractions, available here, is fully documented and should help clarifying the concepts of DXR.
 
+## 5.1 DXCompiler.dll
+The HelloTriangle example from Nvidia includes a Post-Build Event that looks for dxcompiler.dll and dxil.dll in the C:\x64\ folder.
+
+![](5.1.PNG)
+
+[Download the latest release](https://github.com/microsoft/DirectXShaderCompiler/releases) and extract it to C:\x64\
+
 ### DXR Helpers [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/DXRHelpers.zip) the utility classes and copy to the project directory.
 
 1. Add the utility files to the solution
