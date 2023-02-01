@@ -10,3 +10,8 @@
     * Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
     * I am only filling in the gaps in explaination and fixing broken code
     * This completes part 1
+* [2 - Rendering a RTX Triangle]()
+    * Picking up at part 2 from [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/DX12-Raytracing-tutorial-Part-2)
+    * Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
+    * I am only filling in the gaps in explaination and fixing broken code
+    * This completes part 2
