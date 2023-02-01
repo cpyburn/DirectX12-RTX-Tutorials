@@ -2,6 +2,7 @@
 
 ## 7. Overview of the System
 Raytracing using DXR requires 3 main building blocks. The acceleration structures store the geometric information to optimize the search for ray intersection points, and are separated into the bottom-level (BLAS) and top-level (TLAS). The raytracing pipeline contains the compiled programs along with the function names associated to each shader program, as well as a description of how those shaders exchange data. Finally, the shader binding table is linking all of those pieces together by indicating which shader programs are executed for which geometry, and which resources are associated with it.
+
 ![](3.PNG)
 
 Figure 3: Overview of raytracing building blocks
@@ -10,6 +11,7 @@ To facilitate the first contact with DXR, the helper classes we added previously
 
 ## 8. Acceleration Structure
 To be efficient, raytracing requires putting the geometry in an acceleration structure (AS) that will reduce the number of ray-triangle intersection tests during rendering. In DXR this structure is divided into a two-level tree. Intuitively, this can directly map to the notion of an object in a scene graph, where the internal nodes of the graph have been collapsed into a single transform matrix for each bottom-level AS objects. Those BLAS then hold the actual vertex data of each object. However, it is also possible to combine multiple objects within a single bottom-level AS: for that, a single BLAS can be built from multiple vertex buffers, each with its own transform matrix. Note that if an object is instantiated several times within a same BLAS, its geometry will be duplicated. This can particularly be useful to improve performance on static, non-instantiated scene components (as a rule of thumb, the fewer BLAS, the better). For each BLAS, the top-level AS that will contain the object instances, each one with its own transformation matrix. We will start with a single bottom-level AS containing the vertices of the triangle and a top-level AS instancing it once with an identity transform.
+
 ![](4.PNG)
 
 Figure 4: Acceleration Structure
@@ -32,29 +34,37 @@ struct AccelerationStructureBuffers {
   ComPtr<ID3D12Resource> pInstanceDesc; // Hold the matrices of the instances
 };
 ```
+
 This tutorial will only use a single bottom-level AS, for which we only store the pResult buffer. For the top-level AS, we anticipate the possibility of implementing dynamic changes, and keep track of the generator helper class and all the AccelerationStructureBuffers structure. We also anticipate the possibility of having several instances, and store a vector whose entries associate a bottom-level AS to a transform matrix.
 
-ComPtr<id3d12resource> m_bottomLevelAS; // Storage for the bottom Level AS
-nv_helpers_dx12::TopLevelASGenerator m_topLevelASGenerator;
-AccelerationStructureBuffers m_topLevelASBuffers;
-std::vector<std::pair<comptr<id3d12resource>, DirectX::XMMATRIX>> m_instances;
-We also introduce 3 methods:
+```c++
+	ComPtr<ID3D12Resource> m_bottomLevelAS; // Storage for the bottom Level AS
+	nv_helpers_dx12::TopLevelASGenerator m_topLevelASGenerator;
+	AccelerationStructureBuffers m_topLevelASBuffers;
+	std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>> m_instances;
+```
 
-CreateBottomLevelAS, which generates the bottom-level AS from a vector of vertex buffers in GPU memory and vertex count
-CreateTopLevelAS, which generates the top-level AS from a vector of bottom-level AS and transform matrix
-CreateAccelerationStructures binding the above methods together
-/// Create the acceleration structure of an instance
-///
-/// \param vVertexBuffers : pair of buffer and vertex count
-/// \return AccelerationStructureBuffers for TLAS
-AccelerationStructureBuffers
-CreateBottomLevelAS(std::vector<std::pair<comptr<id3d12resource>, uint32_t>> vVertexBuffers);
-/// Create the main acceleration structure that holds
-/// all instances of the scene
-/// \param instances : pair of BLAS and transform
-void CreateTopLevelAS( const std::vector<std::pair<comptr<id3d12resource>, DirectX::XMMATRIX>>& instances);
-/// Create all acceleration structures, bottom and top
-void CreateAccelerationStructures();
+We also introduce 3 methods:
+* CreateBottomLevelAS, which generates the bottom-level AS from a vector of vertex buffers in GPU memory and vertex count
+* CreateTopLevelAS, which generates the top-level AS from a vector of bottom-level AS and transform matrix
+* CreateAccelerationStructures binding the above methods together
+
+```c++
+	/// Create the acceleration structure of an instance
+	///
+	/// \param     vVertexBuffers : pair of buffer and vertex count
+	/// \return    AccelerationStructureBuffers for TLAS
+	AccelerationStructureBuffers CreateBottomLevelAS(std::vector<std::pair<ComPtr<ID3D12Resource>, uint32_t>> vVertexBuffers);
+
+	/// Create the main acceleration structure that holds
+	/// all instances of the scene
+	/// \param     instances : pair of BLAS and transform
+	void CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances);
+
+	/// Create all acceleration structures, bottom and top
+	void CreateAccelerationStructures();
+```
+  
 In D3D12HelloTriangle.cpp, we will add the implementation of those methods. First, include the following to access some helper functions and the bottom-level AS helper class:
 
 #include "DXRHelper.h"
