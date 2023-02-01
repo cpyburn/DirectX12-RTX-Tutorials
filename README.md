@@ -14,4 +14,5 @@
     * Starting part 2 from [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/DX12-Raytracing-tutorial-Part-2)
     * Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
     * I am only filling in the gaps in explaination and fixing broken code
+    * I changed the numbering to work better for tutorials
     * This completes part 2
