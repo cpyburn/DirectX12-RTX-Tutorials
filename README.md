@@ -17,6 +17,6 @@
     * I changed the numbering to work better for tutorials
     * Fixed EXECUTION ERROR #1161: DISPATCH_RAYS_INVALID bug
 * [3 - RTX Using the Vertex Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/3%20-%20RTX%20Using%20the%20Vertex%20Buffer)
-    * Starting part 2 from [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/DX12-Raytracing-tutorial-Part-2)
+    * Finish part 2 from [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/DX12-Raytracing-tutorial-Part-2)
     * Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
     * This completes part 2
