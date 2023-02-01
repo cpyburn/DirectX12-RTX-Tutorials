@@ -54,7 +54,7 @@ In the following tutorial, we will use some utility functions that are abstracti
 
 ## 6. Enabling Raytracing Capabilities
 
-Raytracing-enabled Device and Command List
+### 6.1 Raytracing-enabled Device and Command List
 Our sample uses the simplest APIs of DirectX12, exposed in the ID3D12Device and ID3D12GraphicsCommandList classes. The raytracing APIs are much more advanced and recent, and were included in the ID3D12Device5 and ID3D12GraphicsCommandList4 classes. In D3D12HelloTriangle.h, we replace the declaration of m_device and m_commandList accordingly:
 
 ```c++
@@ -63,20 +63,34 @@ Our sample uses the simplest APIs of DirectX12, exposed in the ID3D12Device and 
   ```
 
 ## Checking for Raytracing Support
-In `D3D12HelloTriangle.h`, we add a method for checking whether the device supports raytracing:void CheckRaytracingSupport();
+In `D3D12HelloTriangle.h`, we add a method for checking whether the device supports raytracing:
+```c++
+void CheckRaytracingSupport();
+```
 The body of the function is added to the D3D12HelloTriangle.cpp file. The raytracing features are part of the D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature set:
 
-void D3D12HelloTriangle::CheckRaytracingSupport() { D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {}; ThrowIfFailed(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5))); if (options5.RaytracingTier < D3D12_RAYTRACING_TIER_1_0) throw std::runtime_error("Raytracing not supported on device");
+```c++
+void D3D12HelloTriangle::CheckRaytracingSupport()
+{
+	D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
+	ThrowIfFailed(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
+		&options5, sizeof(options5)));
+	if (options5.RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
+		throw std::runtime_error("Raytracing not supported on device");
 }
+```
 We then add a call to this method at the end of OnInit:
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 We will also add the ability to switch between Raster and RayTracing by pressing the `SPACEBAR`.
 In `D3D12HelloTriangle.h`, for convenience, we also introduce a function to switch between raytracing and raster at runtime.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C virtual void OnKeyUp(UINT8 key); bool m_raster = true;
+
+```c++
+OnKeyUp(UINT8 key); 
+bool m_raster = true;
+```
 All the code snippets go into the private section.
-!!! Tip All the code snippets go into the private section.
-OnInit()
+
+### 6.2 OnInit()
 In the original D3D12HelloTriangle sample, the LoadAssets method creates, initializes and closes the command list. The raytracing setup will require an open command list, and for clarity we prefer adding the methods initializing the raytracing in the OnInit method. Therefore we need to move the following lines from LoadAssets() and put them at the end of the OnInit() function.
 
 // Command lists are created in the recording state, but there is
