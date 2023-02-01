@@ -278,25 +278,25 @@ Add the call at the end of the function to create the raytracing pipeline
 CreateRaytracingPipeline();
 ```
 
-## 3 Creating Resources
+## 11 Creating Resources
 Unlike the rasterization, the raytracing process does not write directly to the render target: instead, it writes its results into a buffer bound as an unordered access view (UAV), which is then copied to the render target for display. Also, any shader program that calls TraceRay() needs to be able to access the top-level acceleration structure (TLAS). As shown in the Shading Pipeline section, the root signature of the ray generation shader defines the access to both buffers as two ranges within a resource heap. In this section we will first create the raytracing output buffer m_outputResource, and then create the heap m_srvUavHeap referencing both that buffer and the TLAS. Add the following declaration in D3D12HelloTriangle.h
 
-// #DXR
+```
+// 11 #DXR
 void CreateRaytracingOutputBuffer();
 void CreateShaderResourceHeap();
-ComPtr<id3d12resource> m_outputResource;
-ComPtr<id3d12descriptorheap> m_srvUavHeap;
-CreateRaytracingOutputBuffer
+ComPtr<ID3D12Resource> m_outputResource;
+ComPtr<ID3D12DescriptorHeap> m_srvUavHeap;
+```
+
+## 11.1 CreateRaytracingOutputBuffer
 The method below allocates the buffer holding the raytracing output using ID3D12Device::CreateCommittedResource, with the same size as the output image. This buffer is initialized in the copy source state D3D12_RESOURCE_STATE_COPY_SOURCE, which is the state assumed by the PopulateCommandList method. That method will transition the buffer to a D3D12_RESOURCE_STATE_UNORDERED_ACCESS, perform raytracing and transition back to D3D12_RESOURCE_STATE_COPY_SOURCE so that the contents of the buffer can be copied to the render target using ID3D12GraphicsCommandList::CopyResource. It is then important that the raytracing output buffer is created with the D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS flag.
 
-//-----------------------------------------------------------------------------
-//
-// Allocate the buffer holding the raytracing output, with the same size as the
-// output image
-//
-void D3D12HelloTriangle::CreateRaytracingOutputBuffer() { D3D12_RESOURCE_DESC resDesc = {}; resDesc.DepthOrArraySize = 1; resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // The backbuffer is actually DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, but sRGB // formats cannot be used with UAVs. For accuracy we should convert to sRGB // ourselves in the shader resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; resDesc.Width = GetWidth(); resDesc.Height = GetHeight(); resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN; resDesc.MipLevels = 1; resDesc.SampleDesc.Count = 1; ThrowIfFailed(m_device->CreateCommittedResource( &nv_helpers_dx12::kDefaultHeapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&m_outputResource)));
-}
-CreateShaderResourceHeap
+```
+
+```
+
+# 11.2 CreateShaderResourceHeap
 The data accessible to all shaders is typically referenced in a heap bound before rendering. This heap contains a predefined number of slots, each of them containing a view on an object in GPU memory. In practice, the heap is a memory area containing views on common resources. Such views are directly written into the heap memory using ID3D12Device::Create*View calls. In this tutorial the heap only contains two entries: the raytracing output buffer accessed as a UAV, and the top-level acceleration structure which is a shader resource (SRV) with a specific dimension flag D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE.
 
 //-----------------------------------------------------------------------------
