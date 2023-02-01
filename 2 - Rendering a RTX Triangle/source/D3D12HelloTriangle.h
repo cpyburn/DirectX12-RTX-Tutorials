@@ -17,6 +17,8 @@
 #include <dxcapi.h>
 #include <vector>
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
+// 12.1
+#include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
 
 using namespace DirectX;
 
@@ -107,4 +109,36 @@ private:
 
 	/// Create all acceleration structures, bottom and top
 	void CreateAccelerationStructures();
+
+	// 10.1 #DXR
+	ComPtr<ID3D12RootSignature> CreateRayGenSignature();
+	ComPtr<ID3D12RootSignature> CreateHitSignature();
+	ComPtr<ID3D12RootSignature> CreateMissSignature();
+
+	void CreateRaytracingPipeline();
+
+	ComPtr<IDxcBlob> m_rayGenLibrary;
+	ComPtr<IDxcBlob> m_hitLibrary;
+	ComPtr<IDxcBlob> m_missLibrary;
+
+	ComPtr<ID3D12RootSignature> m_rayGenSignature;
+	ComPtr<ID3D12RootSignature> m_hitSignature;
+	ComPtr<ID3D12RootSignature> m_missSignature;
+
+	// Ray tracing pipeline state
+	ComPtr<ID3D12StateObject> m_rtStateObject;
+	// Ray tracing pipeline state properties, retaining the shader identifiers
+	// to use in the Shader Binding Table
+	ComPtr<ID3D12StateObjectProperties> m_rtStateObjectProps;
+
+	// 11. #DXR
+	void CreateRaytracingOutputBuffer();
+	void CreateShaderResourceHeap();
+	ComPtr<ID3D12Resource> m_outputResource;
+	ComPtr<ID3D12DescriptorHeap> m_srvUavHeap;
+
+	// 12.2 #DXR
+	void CreateShaderBindingTable();
+	nv_helpers_dx12::ShaderBindingTableGenerator m_sbtHelper;
+	ComPtr<ID3D12Resource> m_sbtStorage;
 };

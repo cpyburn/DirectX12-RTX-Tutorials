@@ -67,4 +67,10 @@
       <Filter>Assets\Shaders</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Common.hlsl" />
+    <None Include="Hit.hlsl" />
+    <None Include="Miss.hlsl" />
+    <None Include="RayGen.hlsl" />
+  </ItemGroup>
 </Project>
