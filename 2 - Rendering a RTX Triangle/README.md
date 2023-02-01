@@ -1,9 +1,9 @@
 # 2 - Rendering a RTX Triangle
 
-## 1. On to Rendering
+## 9. On to Rendering
 Welcome to Part 2 of the DXR ray tracing tutorial. Part 1 showed you how to set up your Windows 10 programming environment to support writing DXR ray tracing applications. Now we take the sample application used in Part 1 to add ray tracing.
 
-## 2. Shading Pipeline
+## 10. Shading Pipeline
 When creating rasterization shaders with DirectX12, the application compiles them into executable shaders, which are bound to the rasterization pipeline. All objects rendered using this pipeline will use those shaders. To render an image with several types of shaders, the rasterization pipeline needs to be set to use each before calling the draw commands. In a raytracing context, a ray traced to the scene can hit any object and thus trigger the execution of any shader. Instead of using one shader executable at a time, we now need to have all shaders available at once. The pipeline then contains all the shader required to render the scene, and information on how to execute it. To be able to raytrace some geometry, a DXR pipeline typically uses at least those 3 HLSL shader program types:
 
 * The ray generation program, that will be the starting point of the raytracing, and called for each pixel: it will typically initialize a ray descriptor RayDesc starting at the location of the camera, in a direction given by evaluating the camera lens model at the pixel location. It will then invoke TraceRay(), that will shoot the ray in the scene. Other shaders below will process further events, and return their result to the ray generation shader through the ray payload.
@@ -17,12 +17,14 @@ Two more shader types can optionally be used:
 * The any hit shader is executed on each potential intersection: when searching for the hit point closest to the ray origin, several candidates may be found on the way. The any hit shader can typically be used to efficiently implement alpha-testing. If the alpha test fails, the ray traversal can continue without having to call TraceRay() again. The built-in any hit shader is simply a pass-trough returning the intersection to the traversal engine that will determine which potential intersection is the closest.
 
 Figure 1:
+
 ![](9.PNG) 
+
 The Raytracing Pipeline
 
 In this tutorial we will create a pipeline containing only the 3 mandatory shader programs: a single ray generation, single miss and a single closest hit. This is done by first compiling each shader program into a DirectX Intermediate Language (DXIL) library using the DirectX Compiler IDxcCompiler with the target lib_6_3. This target has been introduced with DXR. Such libraries will be linked together within the raytracing pipeline, which will be able to route the intersection calculations to the right hit shaders. To be able to focus on the pipeline generation, we provide simplistic shaders:
 
-### Shaders (Download) Download the shaders and extract the content to the main folder.
+### Shaders [Download](https://developer.nvidia.com/rtx/raytracing/dxr/tutorial/Files/Shaders.zip) the shaders and extract the content to the main folder.
 ### Adding to the Solution If you are adding the shaders to the solution, you need to exclude them from compilation otherwise you will get compilation errors.
 
 This archive contains 4 files:
@@ -32,11 +34,13 @@ This archive contains 4 files:
 * Miss.hlsl defines the Miss() shader, with its semantic [shader(“miss”)]. This shader will be executed when no geometry is hit, and will write a constant color in the payload. Note that this shader takes the payload as a inout parameter. It will be provided to the shader automatically by DXR. Since our current ray generation program does not trace any ray for now, this shader will not be called.
 * Hit.hlsl contains a very simple closest hit shader ClosestHit(), with its semantic [shader("closesthit")] . It will be executed upon hitting the geometry (our triangle). As the miss shader, it takes the ray payload payload as a inout parameter. It also has a second parameter defining the intersection attributes as provided by the intersection shader, ie. the barycentric coordinates. This shader simply writes a constant color to the payload, as well as the distance from the origin, provided by the built-in RayCurrentT() function.
 
-## 2.1 Root Signatures and Shader Libraries
+## 10.1 Root Signatures and Shader Libraries
 Shaders usually require external data, such as textures, constant buffers etc. Those inputs are specified in the shader code, by binding data to a given register: RWTexture2D< float4 > gOutput : register(u0);. In this case, the register means the data is accessible in the first unordered access variable (UAV, identified by the letter u) bound to the shader. Constant buffers (CBV), can be accessed using the letter b. Shader resources (SRV) correspond to the letter t. The usage of simple numbers to identify the index of the accessed buffer can cause problems when addressing ranges of buffers with unknown size. This is particularly useful when assembling shaders from several sources when generating shader permutations. HLSL introduces the notion of space, which allows reusing the same resource index while avoiding collisions:
 
-RWTexture2D< float4 > gOutput : register(u0, space0);
-RWTexture2D< float4 > gEnvironment : register(u0, space1);
+```c++
+RWTexture2D<float4> gOutput : register(u0, space0);
+RWTexture2D<float4> gEnvironment : register(u0, space1);
+```
 When space is not specified, space0 is used. The binding of the resources is also defined explicitly using root signatures, which must match the order and types defined within the shader. Each binding in ther shader corresponds to an entry in the root signature. A root signature entry is defined by a D3D12_ROOT_PARAMETER. Each entry has a type, such as D3D12_ROOT_PARAMETER_TYPE_CBV for a direct access to a pointer on a constant buffer. Such direct accesses can also be used for UAV (D3D12_ROOT_PARAMETER_TYPE_UAV) and shader resources (D3D12_ROOT_PARAMETER_TYPE_SRV). An entry can also be a set of directly specified constants (D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS), which correspond to register (b). Finally, an entry can also point to ranges of slots within the currently bound heap (D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE). Note that even if a shader does not access external resources (e.g. returning a hardcoded color) a root signature needs to be defined. In this case the signature will not have any parameters. We therefore add the following declarations in the header files: methods to create the root signatures and the pipeline itself, the storage for the IDxcBlob containing the DXIL libraries of the shaders, the root signatures of the shaders, and the pipeline object itself m_rtStateObject. This latter will also to be cast to a ID3D12StateObjectProperties as well to access some of its functionalities, particularly the method looking up shader identifiers using their name string, ID3D12StateObjectProperties::GetShaderIdentifier().
 
 // #DXR
