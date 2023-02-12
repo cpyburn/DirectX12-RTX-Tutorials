@@ -239,11 +239,19 @@ void D3D12HelloTriangle::LoadAssets()
 	// Create the vertex buffer.
 	{
 		// Define the geometry for a triangle.
-		Vertex triangleVertices[] =
+		//Vertex triangleVertices[] =
+		//{
+		//	{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+		//	{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+		//	{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+		//};
+		
+		// 17.1
+		Vertex triangleVertices[] = 
 		{
-			{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-			{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+			{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}},
+			{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+			{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}}
 		};
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -613,6 +621,8 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature()
 ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() 
 {
 	nv_helpers_dx12::RootSignatureGenerator rsc;
+	// 15.1 
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV);
 	return rsc.Generate(m_device.Get(), true);
 }
 
@@ -813,7 +823,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 	m_sbtHelper.AddMissProgram(L"Miss", {});
 
 	// Adding the triangle hit shader
-	m_sbtHelper.AddHitGroup(L"HitGroup", {});
+	// 16
+	m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_vertexBuffer->GetGPUVirtualAddress()) });
 
 	// Compute the size of the SBT given the number of shaders and their
 	// parameters
