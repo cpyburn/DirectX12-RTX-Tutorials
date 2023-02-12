@@ -181,46 +181,27 @@ The program should now run, showing this image in the rasterization mode:
 ## 18.9 RayGen.hlsl
 The raytracing mode requires changes in the ray generation shader. For this we first add the declaration of the camera buffer. Here, we use all the available matrices:
 
-// #DXR Extra: Perspective Camera
+At the top of RayGen.hlsl add
+```c++
+// 18.9 #DXR Extra: Perspective Camera
 cbuffer CameraParams : register(b0)
-{ float4x4 view; float4x4 projection; float4x4 viewI; float4x4 projectionI;
+{
+    float4x4 view; 
+    float4x4 projection; 
+    float4x4 viewI; 
+    float4x4 projectionI;
 }
-The ray generation then uses the inverse matrices to generate a ray: using a ray starting on a [0,1]x[0,1] square on the XY plane, and with a direction along the Z axis, we apply the inverse transforms to generate a perspective projection at the actual camera location. For this, we replace the origin and direction in the RayDesc initialization:
+```
+And then for the RayDesc, modify it to be the following;
+```c++
+  // 18.9 #DXR Extra: Perspective Camera
+  RayDesc ray;
+  ray.Origin = mul(viewI, float4(0, 0, 0, 1));
+  float4 target = mul(projectionI, float4(d.x, -d.y, 1, 1));
+  ray.Direction = mul(viewI, float4(target.xyz, 0));
+  ray.TMin = 0;
+  ray.TMax = 100000;
+```
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-And voila! The perspective camera is also available in raytracing mode:
-![](/sites/default/files/pictures/2018/dx12_rtx_tutorial/Extra/perspectiveRaytracing.png)
-# Camera Manipulator
-It is also possible to easily add an interactive camera.
-For this, you will need a utility class `manipulator` which you can find under this [ZIP](Manipulator.zip) file.
-Copy the GLM folder and manipulator.[h|cpp] to the tutorial and add the manipulator to the project.
-![Figure [Fig]: The default camera manipulator](/sites/default/files/pictures/2018/dx12_rtx_tutorial/Extra/)
-## DXSample
-In the file `DXSample.h`, add the following virtual functions
-virtual void OnButtonDown(UINT32) {} virtual void OnMouseMove(UINT8, UINT32) {}
-
-## WindowProc
-In the `WindowProc` of `Win32Application.cpp`, capture the mouse button and movement and transfer it to the application
-case WM_LBUTTONDOWN: case WM_RBUTTONDOWN: case WM_MBUTTONDOWN: if (pSample) { pSample->OnButtonDown(static_cast(lParam)); } return 0; case WM_MOUSEMOVE: if (pSample) { pSample->OnMouseMove(static_cast(wParam), static_cast(lParam)); } return 0;
-
-## D3D12HelloTriangle
-Add the declaration of the overloaded functions to the class.
-// #DXR Extra: Perspective Camera++ void OnButtonDown(UINT32 lParam); void OnMouseMove(UINT8 wParam, UINT32 lParam);
-
-In the source file of D3D12HelloTriangle, add the following headers
-#include “glm/gtc/type_ptr.hpp” #include “manipulator.h” #include “Windowsx.h”
-
-## OnInit
-The camera manipulator need to be initialized with the size of the window and a startup position.
-Add the following at the beginning of the `OnInit`
-nv_helpers_dx12::CameraManip.setWindowSize(GetWidth(), GetHeight()); nv_helpers_dx12::CameraManip.setLookat(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-
-## OnButtonDown && OnMouseMove
-Create the implementation for the mouse interaction
-//-------------------------------------------------------------------------------------------------- // // void D3D12HelloTriangle::OnButtonDown(UINT32 lParam) { nv_helpers_dx12::CameraManip.setMousePosition(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam)); } //-------------------------------------------------------------------------------------------------- // // void D3D12HelloTriangle::OnMouseMove(UINT8 wParam, UINT32 lParam) { using nv_helpers_dx12::Manipulator; Manipulator::Inputs inputs; inputs.lmb = wParam & MK_LBUTTON; inputs.mmb = wParam & MK_MBUTTON; inputs.rmb = wParam & MK_RBUTTON; if (!inputs.lmb && !inputs.rmb && !inputs.mmb) return; // no mouse button pressed inputs.ctrl = GetAsyncKeyState(VK_CONTROL); inputs.shift = GetAsyncKeyState(VK_SHIFT); inputs.alt = GetAsyncKeyState(VK_MENU); CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs); }
-
-## UpdateCameraBuffer
-Finally, we need to extract the camera matrix from the manipulator and update the
-buffer of matrices.
-Replace the code that is setting `matrices[0]`, by:
-const glm::mat4& mat = nv_helpers_dx12::CameraManip.getMatrix(); memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float)); ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Now in ray tracing mode you should see:
+![](18.9.PNG)
