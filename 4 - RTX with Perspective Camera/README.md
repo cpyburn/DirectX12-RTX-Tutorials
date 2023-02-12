@@ -176,8 +176,9 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 }
 ```
 The program should now run, showing this image in the rasterization mode: 
+![](18.8.PNG)
 
-RayGen.hlsl
+## 18.9 RayGen.hlsl
 The raytracing mode requires changes in the ray generation shader. For this we first add the declaration of the camera buffer. Here, we use all the available matrices:
 
 // #DXR Extra: Perspective Camera
