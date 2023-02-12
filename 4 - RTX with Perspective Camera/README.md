@@ -142,30 +142,37 @@ m_commandList->SetGraphicsRootDescriptorTable(0, m_constHeap->GetGPUDescriptorHa
 ## 18.6 OnInit
 In the initialization of the application, we need to call the creation of the buffer. Add the following just after CreateRaytracingOutputBuffer().
 ```c++
-// #DXR Extra: Perspective Camera
+// 18.6 #DXR Extra: Perspective Camera
 // Create a buffer to store the modelview and perspective camera matrices
 CreateCameraBuffer();
 ```
 ## 18.7 OnUpdate
 It is not needed to update the camera matrix at each frame since it is not modified, but this is something that it is usually done. See the Camera Manipulator Section where we are adding the ability to move the the camera interactively.
 ```c++
-// Update frame-based values.
-void D3D12HelloTriangle::OnUpdate()
-{ // #DXR Extra: Perspective Camera UpdateCameraBuffer();
-}
+// 18.7 #DXR Extra: Perspective Camera 
+UpdateCameraBuffer();
 ```
 ## 18.8 shaders.hlsl
 The last step to use the camera buffer for rasterization is to use the newly created buffer inside the shader. Since the buffer is associated to the register b0, we add the declaration at the beginning of the file. Note that since only the view and projection matrices are required, and they are at the beginning of the buffer, we only declare those in the shader:
 ```c++
-// #DXR Extra: Perspective Camera
+// 18.8 #DXR Extra: Perspective Camera
 cbuffer CameraParams : register(b0)
-{ float4x4 view; float4x4 projection;
+{
+	float4x4 view; 
+	float4x4 projection;
 }
 ```
 We need to modify the vertex shader to use the matrices:
 ```c++
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
-{ PSInput result; // #DXR Extra: Perspective Camera float4 pos = position; pos = mul(view, pos); pos = mul(projection, pos); result.position = pos; result.color = color; return result;
+{
+	PSInput result; // 18.8 #DXR Extra: Perspective Camera 
+	float4 pos = position; 
+	pos = mul(view, pos); 
+	pos = mul(projection, pos); 
+	result.position = pos; 
+	result.color = color; 
+	return result;
 }
 ```
 The program should now run, showing this image in the rasterization mode: 
