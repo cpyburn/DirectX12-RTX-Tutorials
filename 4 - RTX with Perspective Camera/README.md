@@ -1,14 +1,17 @@
-DXR Tutorial Extra : Perspective Camera
-Welcome to the next section of the tutorial. If you miss the first tutorial, it is here The bases of this tutorial starts at the end of the previous one. You can download the entire project here At the end of the first tutorial, a triangle is visible using an orthographic camera:  In this tutorial we will extend this to a more natural perspective camera. To do this, the camera matrices need to be passed to the shaders through a the constant buffer m_cameraBuffer. For use in the rasterization pipeline we will also create the heap m_constHeap in which the camera buffer will be referenced. Add the following declarations in the header file:
+# DXR Tutorial Extra : Perspective Camera
 
+In this tutorial we will extend this to a more natural perspective camera. To do this, the camera matrices need to be passed to the shaders through a the constant buffer m_cameraBuffer. For use in the rasterization pipeline we will also create the heap m_constHeap in which the camera buffer will be referenced. Add the following declarations in the header file:
+
+```c++
 // #DXR Extra: Perspective Camera
 void CreateCameraBuffer();
 void UpdateCameraBuffer();
 ComPtr< ID3D12Resource > m_cameraBuffer;
 ComPtr< ID3D12DescriptorHeap > m_constHeap;
 uint32_t m_cameraBufferSize = 0;
+```
 At the end of the source file, add the implementation of the creation of the camera buffer. This method is creating a buffer to contain all matrices. We then create a heap referencing the camera buffer, that will be used in the rasterization path.
-
+```c++
 //----------------------------------------------------------------------------------
 //
 // The camera buffer is a constant buffer that stores the transform matrices of
@@ -20,6 +23,7 @@ At the end of the source file, add the implementation of the creation of the cam
 // #DXR Extra: Perspective Camera
 void D3D12HelloTriangle::CreateCameraBuffer() { uint32_t nbMatrix = 4; // view, perspective, viewInv, perspectiveInv m_cameraBufferSize = nbMatrix * sizeof(XMMATRIX); // Create the constant buffer for all matrices m_cameraBuffer = nv_helpers_dx12::CreateBuffer( m_device.Get(), m_cameraBufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); // Create a descriptor heap that will be used by the rasterization shaders m_constHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true); // Describe and create the constant buffer view. D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; cbvDesc.BufferLocation = m_cameraBuffer->GetGPUVirtualAddress(); cbvDesc.SizeInBytes = m_cameraBufferSize; // Get a handle to the heap memory on the CPU side, to be able to write the // descriptors directly D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_constHeap->GetCPUDescriptorHandleForHeapStart(); m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
 }
+```
 UpdateCameraBuffer
 Add the following function which creates and copies the viewmodel and perspective matrices of the camera.
 
