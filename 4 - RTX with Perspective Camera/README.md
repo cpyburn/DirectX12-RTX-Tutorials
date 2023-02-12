@@ -89,10 +89,10 @@ The camera buffer needs to be accessed by the raytracing path as well. To this e
 // #DXR Extra: Perspective Camera
 // Create a SRV/UAV/CBV descriptor heap. We need 3 entries - 1 SRV for the TLAS, 1 UAV for the
 // raytracing output and 1 CBV for the camera matrices
-m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), **3**, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 ```
 At the end of the method, we add the actual camera buffer reference:
-
+```c++
 // #DXR Extra: Perspective Camera
 // Add the constant buffer for the camera after the TLAS
 srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -101,17 +101,20 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 cbvDesc.BufferLocation = m_cameraBuffer->GetGPUVirtualAddress();
 cbvDesc.SizeInBytes = m_cameraBufferSize;
 m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
-CreateRayGenSignature
+```
+## 18.3 CreateRayGenSignature
 Since we have changed our heap and want to access the new matrices, the Root Signature of the RayGen shader must be changed. Add the extra entry to access the constant buffer through the b0 register.
-
+```c++
 rsc.AddHeapRangesParameter( {{0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/}, {0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/, 1}, {0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 2}});
-LoadAssets
+```
+## 18.4 LoadAssets
 The buffer starts with 2 matrices:
 
-The view matrix, representing the location of the camera
-The projection matrix, a simple representation of the behavior of the camera lens
+* The view matrix, representing the location of the camera
+* The projection matrix, a simple representation of the behavior of the camera lens
 Those matrices are the classical ones used in the rasterization process, projecting the world-space positions of the vertices into a unit cube. However, to obtain a raytracing result consistent with the rasterization, we need to do the opposite: the rays are initialized as if we had an orthographic camera located at the origin. We then need to transform the ray origin and direction into world space, using the inverse view and projection matrices. The camera buffer stores all 4 matrices, where the raster and raytracing paths will access only the ones needed. We now need to indicate that the rasterization shaders will use the camera buffer, by modifying their root signature at the beginning of LoadAssets. The shader now takes one constant buffer (CBV) parameter, accessible from the currently bound heap:
 
+```c++
 // #DXR Extra: Perspective Camera
 // The root signature describes which data is accessed by the shader. The camera matrices are held
 // in a constant buffer, itself referenced the heap. To do this we reference a range in the heap,
@@ -123,36 +126,42 @@ range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 constantParameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
 CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 rootSignatureDesc.Init(1, &constantParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-PopulateCommandList
+```
+## 18.5 PopulateCommandList
 Until now the rasterization path did not require access to any resources, hence we did not bind any heap for use by the shaders. Add the following lines at the beginning of the rasterization path:
-
+```c++
 if (m_raster)
 { // #DXR Extra: Perspective Camera std::vector< ID3D12DescriptorHeap* > heaps = { m_constHeap.Get() }; m_commandList->SetDescriptorHeaps(static_cast<uint>(heaps.size()), heaps.data()); // set the root descriptor table 0 to the constant buffer descriptor heap m_commandList->SetGraphicsRootDescriptorTable( 0, m_constHeap->GetGPUDescriptorHandleForHeapStart());
-OnInit
+```
+## 18.6 OnInit
 In the initialization of the application, we need to call the creation of the buffer. Add the following just after CreateRaytracingOutputBuffer().
-
+```c++
 // #DXR Extra: Perspective Camera
 // Create a buffer to store the modelview and perspective camera matrices
 CreateCameraBuffer();
-OnUpdate
+```
+## 18.7 OnUpdate
 It is not needed to update the camera matrix at each frame since it is not modified, but this is something that it is usually done. See the Camera Manipulator Section where we are adding the ability to move the the camera interactively.
-
+```c++
 // Update frame-based values.
 void D3D12HelloTriangle::OnUpdate()
 { // #DXR Extra: Perspective Camera UpdateCameraBuffer();
 }
-shaders.hlsl
+```
+## 18.8 shaders.hlsl
 The last step to use the camera buffer for rasterization is to use the newly created buffer inside the shader. Since the buffer is associated to the register b0, we add the declaration at the beginning of the file. Note that since only the view and projection matrices are required, and they are at the beginning of the buffer, we only declare those in the shader:
-
+```c++
 // #DXR Extra: Perspective Camera
 cbuffer CameraParams : register(b0)
 { float4x4 view; float4x4 projection;
 }
+```
 We need to modify the vertex shader to use the matrices:
-
+```c++
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 { PSInput result; // #DXR Extra: Perspective Camera float4 pos = position; pos = mul(view, pos); pos = mul(projection, pos); result.position = pos; result.color = color; return result;
 }
+```
 The program should now run, showing this image in the rasterization mode: 
 
 RayGen.hlsl
