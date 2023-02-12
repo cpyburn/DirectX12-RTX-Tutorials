@@ -1,4 +1,4 @@
-# DXR Tutorial Extra : Perspective Camera
+# 18. DXR Tutorial Extra : Perspective Camera
 
 In this tutorial we will extend this to a more natural perspective camera. To do this, the camera matrices need to be passed to the shaders through a the constant buffer m_cameraBuffer. For use in the rasterization pipeline we will also create the heap m_constHeap in which the camera buffer will be referenced. Add the following declarations in the header file:
 
