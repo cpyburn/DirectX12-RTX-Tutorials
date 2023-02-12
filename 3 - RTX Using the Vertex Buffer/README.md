@@ -21,7 +21,8 @@ The last modification is to modify the Hit shader to get an access to the data. 
 
 ```c++
 struct STriVertex
-{ float3 vertex; float4 color;
+{ 
+	float3 vertex; float4 color;
 };
 ```
 StructuredBuffer<strivertex> BTriVertex : register(t0);
