@@ -83,13 +83,13 @@ void D3D12HelloTriangle::UpdateCameraBuffer()
 ```
 
 ## 18.2 CreateShaderResourceHeap
-The camera buffer needs to be accessed by the raytracing path as well. To this end, we modify CreateShaderResourceHeap and add a reference to the camera buffer in the heap used by the raytracing. The heap then needs to be made bigger, to contain the additional reference
+The camera buffer needs to be accessed by the raytracing path as well. To this end, we modify CreateShaderResourceHeap and add a reference to the camera buffer in the heap used by the raytracing. The heap then needs to be made bigger from 2 to 3, to contain the additional reference
 
 ```c++
 // 18.2 #DXR Extra: Perspective Camera
 // Create a SRV/UAV/CBV descriptor heap. We need 3 entries - 1 SRV for the TLAS, 1 UAV for the
 // raytracing output and 1 CBV for the camera matrices
-m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), **3**, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 ```
 At the end of the method, we add the actual camera buffer reference:
 ```c++
