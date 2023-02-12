@@ -9,6 +9,13 @@
 //
 //*********************************************************
 
+// 18.8 #DXR Extra: Perspective Camera
+cbuffer CameraParams : register(b0)
+{
+	float4x4 view; 
+	float4x4 projection;
+}
+
 struct PSInput
 {
 	float4 position : SV_POSITION;
@@ -17,11 +24,12 @@ struct PSInput
 
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 {
-	PSInput result;
-
-	result.position = position;
-	result.color = color;
-
+	PSInput result; // 18.8 #DXR Extra: Perspective Camera 
+	float4 pos = position; 
+	pos = mul(view, pos); 
+	pos = mul(projection, pos); 
+	result.position = pos; 
+	result.color = color; 
 	return result;
 }
 
