@@ -48,22 +48,49 @@ void D3D12HelloTriangle::CreateCameraBuffer() {
 	m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
 }
 ```
-# 18.1 UpdateCameraBuffer
+## 18.1 UpdateCameraBuffer
 Add the following function which creates and copies the viewmodel and perspective matrices of the camera.
 
-// #DXR Extra: Perspective Camera
+```c++
+// 18.1 #DXR Extra: Perspective Camera
 //--------------------------------------------------------------------------------
 // Create and copies the viewmodel and perspective matrices of the camera
 //
-void D3D12HelloTriangle::UpdateCameraBuffer() { std::vector<xmmatrix> matrices(4); // Initialize the view matrix, ideally this should be based on user // interactions The lookat and perspective matrices used for rasterization are // defined to transform world-space vertices into a [0,1]x[0,1]x[0,1] camera // space XMVECTOR Eye = XMVectorSet(1.5f, 1.5f, 1.5f, 0.0f); XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); matrices[0] = XMMatrixLookAtRH(Eye, At, Up); float fovAngleY = 45.0f * XM_PI / 180.0f; matrices[1] = XMMatrixPerspectiveFovRH(fovAngleY, m_aspectRatio, 0.1f, 1000.0f); // Raytracing has to do the contrary of rasterization: rays are defined in // camera space, and are transformed into world space. To do this, we need to // store the inverse matrices as well. XMVECTOR det; matrices[2] = XMMatrixInverse(&det, matrices[0]); matrices[3] = XMMatrixInverse(&det, matrices[1]); // Copy the matrix contents uint8_t *pData; ThrowIfFailed(m_cameraBuffer->Map(0, nullptr, (void **)&pData)); memcpy(pData, matrices.data(), m_cameraBufferSize); m_cameraBuffer->Unmap(0, nullptr);
+void D3D12HelloTriangle::UpdateCameraBuffer() 
+{
+	std::vector<XMMATRIX> matrices(4); 
+	// Initialize the view matrix, ideally this should be based on user 
+	// interactions The lookat and perspective matrices used for rasterization are 
+	// defined to transform world-space vertices into a [0,1]x[0,1]x[0,1] camera 
+	// space 
+	XMVECTOR Eye = XMVectorSet(1.5f, 1.5f, 1.5f, 0.0f); 
+	XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); 
+	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); 
+	matrices[0] = XMMatrixLookAtRH(Eye, At, Up); 
+	float fovAngleY = 45.0f * XM_PI / 180.0f; 
+	matrices[1] = XMMatrixPerspectiveFovRH(fovAngleY, m_aspectRatio, 0.1f, 1000.0f); 
+	// Raytracing has to do the contrary of rasterization: rays are defined in 
+	// camera space, and are transformed into world space. To do this, we need to 
+	// store the inverse matrices as well. 
+	XMVECTOR det; matrices[2] = XMMatrixInverse(&det, matrices[0]); 
+	matrices[3] = XMMatrixInverse(&det, matrices[1]); 
+	// Copy the matrix contents 
+	uint8_t *pData; 
+	ThrowIfFailed(m_cameraBuffer->Map(0, nullptr, (void **)&pData)); 
+	memcpy(pData, matrices.data(), m_cameraBufferSize); 
+	m_cameraBuffer->Unmap(0, nullptr);
 }
-CreateShaderResourceHeap
+```
+
+## 18.2 CreateShaderResourceHeap
 The camera buffer needs to be accessed by the raytracing path as well. To this end, we modify CreateShaderResourceHeap and add a reference to the camera buffer in the heap used by the raytracing. The heap then needs to be made bigger, to contain the additional reference
 
+```c++
 // #DXR Extra: Perspective Camera
 // Create a SRV/UAV/CBV descriptor heap. We need 3 entries - 1 SRV for the TLAS, 1 UAV for the
 // raytracing output and 1 CBV for the camera matrices
 m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+```
 At the end of the method, we add the actual camera buffer reference:
 
 // #DXR Extra: Perspective Camera
