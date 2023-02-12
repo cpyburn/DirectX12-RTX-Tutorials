@@ -30,10 +30,10 @@ StructuredBuffer<STriVertex> BTriVertex : register(t0);
 
 In the ClosestHit function of the shader, we can use the built-in PrimitiveIndex() call to obtain the index of the triangle we hit. Remove the previous hit color computation and replace it by this to access the vertex data:
 ```c++
-    float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
-    uint vertId = 3 * PrimitiveIndex();
-    float3 hitColor = BTriVertex[vertId + 0].color * barycentrics.x + BTriVertex[vertId + 1].color * barycentrics.y + BTriVertex[vertId + 2].color * barycentrics.z;
-    payload.colorAndDistance = float4(hitColor, RayTCurrent());
+float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+uint vertId = 3 * PrimitiveIndex();
+float3 hitColor = BTriVertex[vertId + 0].color * barycentrics.x + BTriVertex[vertId + 1].color * barycentrics.y + BTriVertex[vertId + 2].color * barycentrics.z;
+payload.colorAndDistance = float4(hitColor, RayTCurrent());
 ```
 
 ## 17.1 LoadAssets
