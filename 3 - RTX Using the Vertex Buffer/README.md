@@ -25,22 +25,28 @@ struct STriVertex
 	float3 vertex;
 	float4 color;
 };
+StructuredBuffer<STriVertex> BTriVertex : register(t0);
 ```
-StructuredBuffer<strivertex> BTriVertex : register(t0);
+
 In the ClosestHit function of the shader, we can use the built-in PrimitiveIndex() call to obtain the index of the triangle we hit. Remove the previous hit color computation and replace it by this to access the vertex data:
 ```c++
-uint vertId = 3 * PrimitiveIndex();
-float3 hitColor = BTriVertex[vertId + 0].color * barycentrics.x + BTriVertex[vertId + 1].color * barycentrics.y + BTriVertex[vertId + 2].color * barycentrics.z;
+    float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+    uint vertId = 3 * PrimitiveIndex();
+    float3 hitColor = BTriVertex[vertId + 0].color * barycentrics.x + BTriVertex[vertId + 1].color * barycentrics.y + BTriVertex[vertId + 2].color * barycentrics.z;
+    payload.colorAndDistance = float4(hitColor, RayTCurrent());
 ```
 
 ## 17.1 LoadAssets
 You can verify that the vertex buffer access is working by modifying the creation of the vertex buffer in LoadAssets(). For example, by changing it to the following, the colors in both the raster and raytracing will change.
 
 ```c++
-Vertex triangleVertices[] = { {{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}}, {{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 1.0f, 1.0f}}, {{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}}};
+		// 17.1
+		Vertex triangleVertices[] = 
+		{
+			{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}},
+			{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+			{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}}
+		};
 ```
-Raster		Ray-trace
-	↔	
-Figure 4: After spacebar
-Final Version (Download) You can grab the final version of the tutorial.
-!!! Note: Final Version (Download) You can grab the final version of the tutorial.
+
+![](17.1.PNG)
