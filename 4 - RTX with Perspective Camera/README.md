@@ -3,7 +3,7 @@
 In this tutorial we will extend this to a more natural perspective camera. To do this, the camera matrices need to be passed to the shaders through a the constant buffer m_cameraBuffer. For use in the rasterization pipeline we will also create the heap m_constHeap in which the camera buffer will be referenced. Add the following declarations in the header file:
 
 ```c++
-// #DXR Extra: Perspective Camera
+// 18. #DXR Extra: Perspective Camera
 void CreateCameraBuffer();
 void UpdateCameraBuffer();
 ComPtr< ID3D12Resource > m_cameraBuffer;
@@ -20,11 +20,11 @@ At the end of the source file, add the implementation of the creation of the cam
 // clarity, it also creates a heap containing only this buffer, to use in the
 // rasterization path.
 //
-// #DXR Extra: Perspective Camera
+// 18. #DXR Extra: Perspective Camera
 void D3D12HelloTriangle::CreateCameraBuffer() { uint32_t nbMatrix = 4; // view, perspective, viewInv, perspectiveInv m_cameraBufferSize = nbMatrix * sizeof(XMMATRIX); // Create the constant buffer for all matrices m_cameraBuffer = nv_helpers_dx12::CreateBuffer( m_device.Get(), m_cameraBufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); // Create a descriptor heap that will be used by the rasterization shaders m_constHeap = nv_helpers_dx12::CreateDescriptorHeap( m_device.Get(), 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true); // Describe and create the constant buffer view. D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; cbvDesc.BufferLocation = m_cameraBuffer->GetGPUVirtualAddress(); cbvDesc.SizeInBytes = m_cameraBufferSize; // Get a handle to the heap memory on the CPU side, to be able to write the // descriptors directly D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_constHeap->GetCPUDescriptorHandleForHeapStart(); m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
 }
 ```
-UpdateCameraBuffer
+# 18.1 UpdateCameraBuffer
 Add the following function which creates and copies the viewmodel and perspective matrices of the camera.
 
 // #DXR Extra: Perspective Camera
