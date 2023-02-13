@@ -1,5 +1,8 @@
 # DirectX-DRX-RTX-Tutorials
-
+## Please report anything that is broken or not working in issues
+##Goals
+   * Self Learn DXR and RTX
+   * Help others learn by making well written and working tutorials
 ## Tutorial List 1
 * Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. 
 * I am only filling in the gaps in explaination and fixing broken code
