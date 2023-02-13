@@ -29,6 +29,6 @@
 * [5 - RTX Global Constant Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/5%20-%20RTX%20Global%20Constant%20Buffer)
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/5%20-%20RTX%20Global%20Constant%20Buffer/19.13.PNG)
 * [6 - RTX Per Instance Data](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/6%20-%20RTX%20Per%20Instance%20Data)
-  * ![]()
+  * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/6%20-%20RTX%20Per%20Instance%20Data/20.9.PNG)
   
 ## Tutorial List 2
