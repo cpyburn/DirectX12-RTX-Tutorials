@@ -26,7 +26,7 @@
    * Finished Extra [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial/extra/dxr_tutorial_extra_perspective)
    ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/4%20-%20RTX%20with%20Perspective%20Camera/18.9.PNG)
 * [5 - RTX Global Constant Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/5%20-%20RTX%20Global%20Constant%20Buffer)
-  ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/5%20-%20RTX%20Global%20Constant%20Buffer/19.13.PNG)
+    ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/5%20-%20RTX%20Global%20Constant%20Buffer/19.13.PNG)
 * [6 - RTX Per Instance Data](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/6%20-%20RTX%20Per%20Instance%20Data)
   ![]()
   
