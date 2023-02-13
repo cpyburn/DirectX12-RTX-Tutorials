@@ -1,10 +1,11 @@
-
+# 21. RTX Shadows
 DXR allows using several ray types, typically to render different effects such as primary rays, which we have been doing in the previous tutorials, and shadow rays. Before starting this tutorial we first need to add some more geometry to cast shadows on, and a perspective camera. Once done, the image should look like this:  We first need to declare the new shader library for the shadow shaders, as well as its root signature at the end of the header:
-
-// #DXR Extra - Another ray type
+```c++
+// 21. #DXR Extra - Another ray type
 ComPtr<idxcblob> m_shadowLibrary;
 ComPtr<id3d12rootsignature> m_shadowSignature;
-ShadowRay.hlsl
+```
+## 21.1 ShadowRay.hlsl
 Create a file ShadowRay.hlsl, add it to the project, and exclude it from the build to avoid fxc to be called during the build. This file will contain the shader code executed when tracing a shadow ray:
 
 // #DXR Extra - Another ray type
