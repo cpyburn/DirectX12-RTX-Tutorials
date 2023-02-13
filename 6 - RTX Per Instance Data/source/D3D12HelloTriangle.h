@@ -157,4 +157,8 @@ private:
 	// 19.8 #DXR Extra: Per-Instance Data
 	void D3D12HelloTriangle::CreateGlobalConstantBuffer();
 	ComPtr<ID3D12Resource> m_globalConstantBuffer;
+
+	// 20.1 #DXR Extra: Per-Instance Data
+	void CreatePerInstanceConstantBuffers();
+	std::vector<ComPtr<ID3D12Resource>> m_perInstanceConstantBuffers;
 };

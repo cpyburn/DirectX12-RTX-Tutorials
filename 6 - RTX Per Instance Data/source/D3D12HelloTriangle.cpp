@@ -58,6 +58,9 @@ void D3D12HelloTriangle::OnInit()
 	// triangle instance
 	CreateGlobalConstantBuffer();
 
+	// 20.2 #DXR Extra: Per-Instance Data
+	CreatePerInstanceConstantBuffers();
+
 	// 11.3
 	// Allocate the buffer storing the raytracing output, with the same dimensions
 	// as the target image
@@ -563,9 +566,15 @@ D3D12HelloTriangle::AccelerationStructureBuffers D3D12HelloTriangle::CreateBotto
 void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances) // pair of bottom level AS and matrix of the instance 
 {
 	// Gather all the instances into the builder helper
-	for (size_t i = 0; i < instances.size(); i++) 
+	//for (size_t i = 0; i < instances.size(); i++) 
+	//{
+	//	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
+	//}
+
+	// 20.4 #DXR Extra: Per-Instance Data
+	for (size_t i = 0; i < instances.size(); i++)
 	{
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
+		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
 	}
 
 	// As for the bottom-level AS, the building the AS requires some scratch space
@@ -716,7 +725,9 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	// using the [shader("xxx")] syntax
 	pipeline.AddLibrary(m_rayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_missLibrary.Get(), { L"Miss" });
-	pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit" });
+	//pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit" });
+	// 20.8 #DXR Extra: Per-Instance Data
+	pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit" });
 
 	// To be used, each DX12 shader needs a root signature defining which
 	// parameters and buffers will be accessed.
@@ -742,6 +753,8 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	// Hit group for the triangles, with a shader simply interpolating vertex
 	// colors
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
+	// 20.8 #DXR Extra: Per-Instance Data
+	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
 
 	// The following section associates the root signature to each shader. Note
 	// that we can explicitly show that some shaders share the same root signature
@@ -750,7 +763,9 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	// closest-hit shaders share the same root signature.
 	pipeline.AddRootSignatureAssociation(m_rayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_missSignature.Get(), { L"Miss" });
-	pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
+	//pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
+	// 20.8 #DXR Extra: Per-Instance Data
+	pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup", L"PlaneHitGroup" });
 
 	// The payload size defines the maximum size of the data carried by the rays,
 	// ie. the the data
@@ -888,7 +903,22 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 
 	// 19.11 #DXR Extra: Per-Instance Data
 	// Adding the triangle hit shader and constant buffer data
-	m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)m_globalConstantBuffer->GetGPUVirtualAddress() });
+	//m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)m_globalConstantBuffer->GetGPUVirtualAddress() });
+
+	// 20.3 #DXR Extra: Per-Instance Data
+	// We have 3 triangles, each of which needs to access its own constant buffer
+	// as a root parameter in its primary hit shader. The shadow hit only sets a
+	// boolean visibility in the payload, and does not require external data
+	for (int i = 0; i < 3; ++i) 
+	{
+		m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_perInstanceConstantBuffers[i]->GetGPUVirtualAddress()) });
+	}
+	// The plane also uses a constant buffer for its vertex colors
+	//m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()) });
+	
+	// 20.9 #DXR Extra: Per-Instance Data
+	// Adding the plane
+	m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {});
 
 	// Compute the size of the SBT given the number of shaders and their
 	// parameters
@@ -1047,4 +1077,39 @@ void D3D12HelloTriangle::CreateGlobalConstantBuffer()
 	ThrowIfFailed(m_globalConstantBuffer->Map(0, nullptr, (void**)&pData)); 
 	memcpy(pData, bufferData, sizeof(bufferData)); 
 	m_globalConstantBuffer->Unmap(0, nullptr);
+}
+
+//-----------------------------------------------------------------------------
+//
+// 20.1 #DXR Extra: Per-Instance Data
+void D3D12HelloTriangle::CreatePerInstanceConstantBuffers()
+{ 
+	// Due to HLSL packing rules, we create the CB with 9 float4 (each needs to start on a 16-byte 
+	// boundary) 
+	XMVECTOR bufferData[] = { 
+		// A 
+		XMVECTOR{1.0f, 0.0f, 0.0f, 1.0f}, 
+		XMVECTOR{1.0f, 0.4f, 0.0f, 1.0f}, 
+		XMVECTOR{1.f, 0.7f, 0.0f, 1.0f}, 
+		// B 
+		XMVECTOR{0.0f, 1.0f, 0.0f, 1.0f}, 
+		XMVECTOR{0.0f, 1.0f, 0.4f, 1.0f}, 
+		XMVECTOR{0.0f, 1.0f, 0.7f, 1.0f}, 
+		// C 
+		XMVECTOR{0.0f, 0.0f, 1.0f, 1.0f}, 
+		XMVECTOR{0.4f, 0.0f, 1.0f, 1.0f}, 
+		XMVECTOR{0.7f, 0.0f, 1.0f, 1.0f}, 
+	}; 
+	m_perInstanceConstantBuffers.resize(3); 
+	int i(0); 
+	for (auto& cb : m_perInstanceConstantBuffers) 
+	{ 
+		const uint32_t bufferSize = sizeof(XMVECTOR) * 3; 
+		cb = nv_helpers_dx12::CreateBuffer(m_device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); 
+		uint8_t* pData; 
+		ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData)); 
+		memcpy(pData, &bufferData[i * 3], bufferSize); 
+		cb->Unmap(0, nullptr); 
+		++i; 
+	}
 }
