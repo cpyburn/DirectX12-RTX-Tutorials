@@ -17,7 +17,7 @@
     * This completes part 2
 * [4 - RTX with Perspective Camera](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/4%20-%20RTX%20with%20Perspective%20Camera)
    * Finished Extra [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial/extra/dxr_tutorial_extra_perspective)
-* [5 - RTX Per Instance Data](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/5%20-%20RTX%20Per%20Instance%20Data)
+* [5 - RTX Per Instance Data](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/5%20-%20RTX%20Global%20Constant%20Buffer)
 
 
 ## Tutorial List 2
