@@ -85,6 +85,11 @@ void D3D12HelloTriangle::CreatePlaneVB()
 		0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
 	memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices));
 	m_planeBuffer->Unmap(0, nullptr);
+	
+	// Initialize the vertex buffer view.
+	m_planeBufferView.BufferLocation = m_planeBuffer->GetGPUVirtualAddress();
+	m_planeBufferView.StrideInBytes = sizeof(Vertex);
+	m_planeBufferView.SizeInBytes = planeBufferSize;
 }
 ```
 
@@ -98,27 +103,31 @@ CreatePlaneVB();
 ```
 ## 19.6 CreateAccelerationStructures
 After creating the bottom-level AS of the triangle, add the creation of the BLAS of the plane:
-
-// #DXR Extra: Per-Instance Data
-AccelerationStructureBuffers planeBottomLevelBuffers =
-CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
+```c++
+// 19.6 #DXR Extra: Per-Instance Data
+AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({{m_planeBuffer.Get(), 6}});
+```
 Then we add a reference to the bottom-level AS of the plane in the instance list:
-
-// 3 instances of the triangle + a plane
-m_instances = {{bottomLevelBuffers.pResult, XMMatrixIdentity()}, {bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)}, // #DXR Extra: Per-Instance Data {planeBottomLevelBuffers.pResult, XMMatrixTranslation(0, 0, 0)}};
-## 19. PopulateCommandList
-To be visible in the rasterization path, we add the following lines after the DrawInstanced call for the triangle:
-
-// #DXR Extra: Per-Instance Data
+```c++
+m_instances = {
+	{bottomLevelBuffers.pResult, DirectX::XMMatrixIdentity()},
+	{bottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(.6f, 0, 0)},
+	{bottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(-.6f, 0, 0)},
+	// 19.6 #DXR Extra: Per-Instance Data
+	{planeBottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(0, 0, 0)}
+};
+```
+## 19.7 PopulateCommandList
+To be visible in the rasterization path, we add the following lines BEFORE the DrawInstanced call for the triangle since there is no depth buffer (z buffer) being used right now:
+```c++
+// 19.7 #DXR Extra: Per-Instance Data
 // In a way similar to triangle rendering, rasterize the plane
 m_commandList->IASetVertexBuffers(0, 1, &m_planeBufferView);
 m_commandList->DrawInstanced(6, 1, 0, 0);
-This is enough to add the plane, but we cannot see it!
-Add a perspective camera to see it.
-!!! Warning This is enough to add the plane, but we cannot see it!
-Add a perspective camera to see it.
+```
+There will be no instancing for the rasterization triangle since it is out of scope for RTX, but the plane will be displayed as pictured below
+![](19.7.PNG)
 
-Adding a plane in raytracing mode
 ## 19. Using a Constant Buffer
 Constant buffer are used to send read-only data from the CPU side to the shaders. Here we will create a constant buffer containing color data, used in the shader to alter the vertex colors. Add the declarations in the header file:
 
