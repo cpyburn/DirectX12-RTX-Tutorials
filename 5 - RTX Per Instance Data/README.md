@@ -1,35 +1,47 @@
 # 19. DXR Tutorial Extra : Per Instance Data
-Welcome to the next section of the tutorial. If you miss the first tutorial, it is here The bases of this tutorial starts at the end of the previous one. You can download the entire project here This tutorial covers the creation of object instances, each having its own shaders and resources. In order to see all the objects created in this tutorial, we strongly advise adding a perspective camera. We will create more instances of the triangle, each of which uses its own vertex colors provided by constant buffers. We also create a plane, which uses a constant buffer as well as a specific shader.
+This tutorial covers the creation of object instances, each having its own shaders and resources. In order to see all the objects created in this tutorial, we strongly advise adding a perspective camera. We will create more instances of the triangle, each of which uses its own vertex colors provided by constant buffers. We also create a plane, which uses a constant buffer as well as a specific shader.
 
 ## 19.1 Adding More Instances
 Adding more instances of the triangle is fairly simple, as it only requires adding those in the top-level acceleration structure.
 
-## 19. CreateAccelerationStructures
+## 19.2 CreateAccelerationStructures
 In CreateAccelerationStructures, modify the instance list to create 3 instances instead of one, each with its own transform matrix.
 
-// #DXR Extra: Per-Instance Data
+```
+// 19.2 #DXR Extra: Per-Instance Data
 // 3 instances of the triangle
-m_instances = {{bottomLevelBuffers.pResult, XMMatrixIdentity()}, {bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)}};
-CreateTopLevelAS(m_instances);
+m_instances = { 
+  {bottomLevelBuffers.pResult, XMMatrixIdentity()}, 
+  {bottomLevelBuffers.pResult, XMMatrixTranslation(-.6f, 0, 0)}, 
+  {bottomLevelBuffers.pResult, XMMatrixTranslation(.6f, 0, 0)} 
+};
+```
 
-
-## 19. Hit.hlsl
+## 19.3 Hit.hlsl
 In the Hit program, DXR provides the built-in InstanceID() function, which returns the ID we have passed in the third argument of AddInstance in CreateTopLevelAS.
-
-// #DXR Extra: Per-Instance Data
-float3 hitColor = float3(0.7, 0.7, 0.7);
+```
+// 19.3
 switch (InstanceID())
-{ case 0: hitColor = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z; break; case 1: hitColor = B * barycentrics.x + B * barycentrics.y + C * barycentrics.z; break; case 2: hitColor = C * barycentrics.x + B * barycentrics.y + C * barycentrics.z; break;
+{
+case 0: hitColor = (barycentrics.x + barycentrics.y + barycentrics.z) * float3(0, 1, 0) * hitColor; // add a color that is different for each instance and then multiply that by hitcolor from vertex data buffer (BTriVertex) so triangles look different
+    break;
+case 1: hitColor = (barycentrics.x + barycentrics.y + barycentrics.z) * float3(1, 1, 0) * hitColor; // add a color that is different for each instance and then multiply that by hitcolor from vertex data buffer (BTriVertex) so triangles look different
+    break;
+case 2: hitColor = (barycentrics.x + barycentrics.y + barycentrics.z) * float3(0, 1, 1) * hitColor; // add a color that is different for each instance and then multiply that by hitcolor from vertex data buffer (BTriVertex) so triangles look different
+    break;
 }
+```
+![](19.3.PNG)
 
-
-## 19. Adding a Plane
+## 19.4 Adding a Plane
 We also add the creation of the vertex buffer for the plane, along with the view on the buffer for rasterization:
 
-// #DXR Extra: Per-Instance Data
+```
+// 19.4 #DXR Extra: Per-Instance Data
 ComPtr<id3d12resource> m_planeBuffer;
 D3D12_VERTEX_BUFFER_VIEW m_planeBufferView;
 void CreatePlaneVB();
+```
 At the end of the source file, add the vertex buffer creation code:
 
 //-----------------------------------------------------------------------------
