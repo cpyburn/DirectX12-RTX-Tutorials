@@ -118,7 +118,7 @@ m_instances = {
 };
 ```
 ## 19.7 PopulateCommandList
-To be visible in the rasterization path, we add the following lines BEFORE the DrawInstanced call for the triangle since there is no depth buffer (z buffer) being used right now:
+To be visible in the rasterization path, we add the following lines before the DrawInstanced call for the triangle since there is no depth buffer (z buffer) being used right now:
 ```c++
 // 19.7 #DXR Extra: Per-Instance Data
 // In a way similar to triangle rendering, rasterize the plane
@@ -128,30 +128,33 @@ m_commandList->DrawInstanced(6, 1, 0, 0);
 There will be no instancing for the rasterization triangle since it is out of scope for RTX, but the plane will be displayed as pictured below
 ![](19.7.PNG)
 
-## 19. Using a Constant Buffer
+## 19.8 Using a Constant Buffer
 Constant buffer are used to send read-only data from the CPU side to the shaders. Here we will create a constant buffer containing color data, used in the shader to alter the vertex colors. Add the declarations in the header file:
-
+```c++
 // #DXR Extra: Per-Instance Data
 void D3D12HelloTriangle::CreateGlobalConstantBuffer();
 ComPtr<id3d12resource> m_globalConstantBuffer;
+```
 Add the buffer allocation method at the end of the source file.
-
+```c++
 //-----------------------------------------------------------------------------
 //
 // #DXR Extra: Per-Instance Data
 void D3D12HelloTriangle::CreateGlobalConstantBuffer()
 { // Due to HLSL packing rules, we create the CB with 9 float4 (each needs to start on a 16-byte // boundary) XMVECTOR bufferData[] = { // A XMVECTOR{1.0f, 0.0f, 0.0f, 1.0f}, XMVECTOR{0.7f, 0.4f, 0.0f, 1.0f}, XMVECTOR{0.4f, 0.7f, 0.0f, 1.0f}, // B XMVECTOR{0.0f, 1.0f, 0.0f, 1.0f}, XMVECTOR{0.0f, 0.7f, 0.4f, 1.0f}, XMVECTOR{0.0f, 0.4f, 0.7f, 1.0f}, // C XMVECTOR{0.0f, 0.0f, 1.0f, 1.0f}, XMVECTOR{0.4f, 0.0f, 0.7f, 1.0f}, XMVECTOR{0.7f, 0.0f, 0.4f, 1.0f}, }; // Create our buffer m_globalConstantBuffer = nv_helpers_dx12::CreateBuffer( m_device.Get(), sizeof(bufferData), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); // Copy CPU memory to GPU uint8_t* pData; ThrowIfFailed(m_globalConstantBuffer->Map(0, nullptr, (void**)&pData)); memcpy(pData, bufferData, sizeof(bufferData)); m_globalConstantBuffer->Unmap(0, nullptr);
 }
-## 19. OnInit
+```
+## 19.9 OnInit
 The creation of the constant buffer can be added right after the call to CreateRayTracingPipeline:
-
+```c++
 // #DXR Extra: Per-Instance Data
 // Create a constant buffers, with a color for each vertex of the triangle, for each
 // triangle instance
 CreateGlobalConstantBuffer();
-## 19. CreateHitSignature
+```
+## 19.10 CreateHitSignature
 Now the geometry is set with the triangles, but the shaders have not been adapted yet to use the constant buffer. We first need to modify the root signature of the hit shader to use a constant buffer passed as a root parameter. Contrary to the buffers passed on the heap, root parameters can be passed per instance. Since this is the first constant buffer we declare in the root signature, we bind it to register 0: it will be accessible as register(b0) in the HLSL code.
-
+```c++
 // #DXR Extra: Per-Instance Data
 // The vertex colors may differ for each instance, so it is not possible to
 // point to a single buffer in the heap. Instead we use the concept of root
@@ -160,32 +163,35 @@ Now the geometry is set with the triangles, but the shaders have not been adapte
 // constant buffer. Here we bind the buffer to the first slot, accessible in
 // HLSL as register(b0)
 rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
-## 19. CreateShaderBindingTable
+```
+## 19.11 CreateShaderBindingTable
 The hit group for the triangle needs to access the constant buffer. For this, we add the pointer to the constant buffer in GPU memory to the set of resources accessed by the hit group.
-
+```c++
 // #DXR Extra: Per-Instance Data
 // Adding the triangle hit shader and constant buffer data
 m_sbtHelper.AddHitGroup(L"HitGroup", {(void*)m_globalConstantBuffer->GetGPUVirtualAddress()});
-## 19. Hit.hlsl
+```
+## 19.12 Hit.hlsl
 To access the constant buffer we replicate its structure in the HLSL code, and indicate the buffer is bound to the b0 register:
-
+```c++
 // #DXR Extra: Per-Instance Data
 cbuffer Colors : register(b0)
 { float3 A[3]; float3 B[3]; float3 C[3];
 }
+```
 In the shader, we can directly access the buffer using the instance ID of the triangles to obtain a different color for each instance.
-
+```c++
 // #DXR Extra: Per-Instance Data
 float3 hitColor = float3(0.6, 0.7, 0.6);
 // Shade only the first 3 instances (triangles)
 if (InstanceID() < 3)
 { hitColor = A[InstanceID()] * barycentrics.x + B[InstanceID()] * barycentrics.y + C[InstanceID()] * barycentrics.z;
 }
+```
 
-
-## 19. Accessing memory differently
+## 19.13 Accessing memory differently
 In the previous section we replicated the structure of the constant buffer exactly in the HLSL code. However, the mapping from the original data to the shader is arbitrary. For example, we could map it as an array of structures.
-
+```c++
 // #DXR Extra: Per-Instance Data
 struct MyStructColor
 { float4 a; float4 b; float4 c;
@@ -193,35 +199,39 @@ struct MyStructColor
 cbuffer Colors : register(b0)
 { MyStructColor Tint[3];
 }
+```
 For each instance, we can now access the data this way:
-
+```c++
 // #DXR Extra: Per-Instance Data
 int instanceID = InstanceID();
 float3 hitColor = Tint[instanceID].a * barycentrics.x + Tint[instanceID].b * barycentrics.y + Tint[instanceID].c * barycentrics.z;
+```
 
 
-## 19. Using Per-Instance Constant Buffer
+## 19.14 Using Per-Instance Constant Buffer
 In most practical cases, the constant buffers are defined per-instance so that they can be managed independently. Add the declaration of an array of per-instance buffers in the header file:
 
 // #DXR Extra: Per-Instance Data
 void CreatePerInstanceConstantBuffers();
 std::vector<comptr<id3d12resource>> m_perInstanceConstantBuffers;
 We can now add the allocation and setup of those buffers at the end of the source file. We create one buffer for each triangle.
-
+```c++
 //-----------------------------------------------------------------------------
 //
 // #DXR Extra: Per-Instance Data
 void D3D12HelloTriangle::CreatePerInstanceConstantBuffers()
 { // Due to HLSL packing rules, we create the CB with 9 float4 (each needs to start on a 16-byte // boundary) XMVECTOR bufferData[] = { // A XMVECTOR{1.0f, 0.0f, 0.0f, 1.0f}, XMVECTOR{1.0f, 0.4f, 0.0f, 1.0f}, XMVECTOR{1.f, 0.7f, 0.0f, 1.0f}, // B XMVECTOR{0.0f, 1.0f, 0.0f, 1.0f}, XMVECTOR{0.0f, 1.0f, 0.4f, 1.0f}, XMVECTOR{0.0f, 1.0f, 0.7f, 1.0f}, // C XMVECTOR{0.0f, 0.0f, 1.0f, 1.0f}, XMVECTOR{0.4f, 0.0f, 1.0f, 1.0f}, XMVECTOR{0.7f, 0.0f, 1.0f, 1.0f}, }; m_perInstanceConstantBuffers.resize(3); int i(0); for (auto& cb : m_perInstanceConstantBuffers) { const uint32_t bufferSize = sizeof(XMVECTOR) * 3; cb = nv_helpers_dx12::CreateBuffer(m_device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); uint8_t* pData; ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData)); memcpy(pData, &bufferData[i * 3], bufferSize); cb->Unmap(0, nullptr); ++i; }
 }
-## 19. OnInit
+```
+## 19.15 OnInit
 The creation of the constant buffer can be added right after the call to CreateRayTracingPipeline:
-
+```c++
 // #DXR Extra: Per-Instance Data
 CreatePerInstanceConstantBuffers();
-## 19. CreateShaderBindingTable
+```
+## 19.16 CreateShaderBindingTable
 The hit groups for each instance and the actual pointers to the constant buffer are then set in the Shader Binding Table. We will add a hit group for each triangle, and one for the plane, so that each can point to its own constant buffer. Replace the triangle hit group by:
-
+```c++
 // #DXR Extra: Per-Instance Data
 // We have 3 triangles, each of which needs to access its own constant buffer
 // as a root parameter in its primary hit shader. The shadow hit only sets a
@@ -231,40 +241,44 @@ for (int i = 0; i < 3; ++i) { m_sbtHelper.AddHitGroup( L"HitGroup", {(void *)(m_
 // The plane also uses a constant buffer for its vertex colors
 m_sbtHelper.AddHitGroup(L"HitGroup",
 { (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress())});
+```
 The triangles will then all invoke the same shader, but use different constant buffers. The plane uses the same constant buffer as the first triangle for simplicity.
 
-## 19. CreateTopLevelAS
+## 19.17 CreateTopLevelAS
 Now the instances are independent, we need to associate the instances with their own hit group in the SBT. This is done by modifying the AddInstance call by indicating that the instance index i is also the index of the hit group to use in the SBT. This way, hitting the i-th triangle will invoke the first hit group defined in the SBT, itself referencing m_perInstanceConstantBuffers[i]:
-
+```c++
 // #DXR Extra: Per-Instance Data
 for (size_t i = 0; i < instances.size(); i++)
 { m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<uint>(i), static_cast<uint>(i));
 }
-## 19. Hit.hlsl
+```
+## 19.18 Hit.hlsl
 Now, for each hit, DXR will bind the associated constant buffer, hence avoiding the need to declare and dereference arrays:
-
+```c++
 // #DXR Extra: Per-Instance Data
 cbuffer Colors : register(b0)
 { float3 A; float3 B; float3 C;
 }
+```
 The computation of the final color is then simplified by accessing the member of the constant buffer directly:
-
+```c++
 // #DXR Extra: Per-Instance Data
 float3 hitColor = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+```
 
-
-## 19. Adding a Specific Hit Shader for the Plane
+## 19.19 Adding a Specific Hit Shader for the Plane
 Until now all the geometry used a single shader. In practice, a scene with different object type will most likely require as many different shaders. In this section we will apply a separate shader for the plane.
 
-## 19. Hit.hlsl
+## 19.20 Hit.hlsl
 Add a new shader in the file:
-
+```c++
 // #DXR Extra: Per-Instance Data
 [shader("closesthit")]
 void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 { float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y); float3 hitColor = float3(0.7, 0.7, 0.3); payload.colorAndDistance = float4(hitColor, RayTCurrent());
 }
-## 19. CreateRaytracingPipeline
+```
+## 19.21 CreateRaytracingPipeline
 This new shader has to be added to the raytracing pipeline, first by adding its symbol when adding m_hitLibrary:
 
 // #DXR Extra: Per-Instance Data
