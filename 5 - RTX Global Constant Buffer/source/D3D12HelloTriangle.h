@@ -148,4 +148,13 @@ private:
 	ComPtr< ID3D12Resource > m_cameraBuffer;
 	ComPtr< ID3D12DescriptorHeap > m_constHeap;
 	uint32_t m_cameraBufferSize = 0;
+
+	// 19.4 #DXR Extra: Per-Instance Data
+	ComPtr<ID3D12Resource> m_planeBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_planeBufferView;
+	void CreatePlaneVB();
+
+	// 19.8 #DXR Extra: Per-Instance Data
+	void D3D12HelloTriangle::CreateGlobalConstantBuffer();
+	ComPtr<ID3D12Resource> m_globalConstantBuffer;
 };

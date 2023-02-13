@@ -53,6 +53,11 @@ void D3D12HelloTriangle::OnInit()
 	// rays (ray payload)
 	CreateRaytracingPipeline();
 
+	// 19.9 #DXR Extra: Per-Instance Data
+	// Create a constant buffers, with a color for each vertex of the triangle, for each
+	// triangle instance
+	CreateGlobalConstantBuffer();
+
 	// 11.3
 	// Allocate the buffer storing the raytracing output, with the same dimensions
 	// as the target image
@@ -292,6 +297,10 @@ void D3D12HelloTriangle::LoadAssets()
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
 	}
 
+	// 19.5 #DXR - Per Instance
+	// Create a vertex buffer for a ground plane, similarly to the triangle definition above
+	CreatePlaneVB();
+
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
 		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -379,6 +388,12 @@ void D3D12HelloTriangle::PopulateCommandList()
 		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		// 19.7 #DXR Extra: Per-Instance Data
+		// In a way similar to triangle rendering, rasterize the plane
+		m_commandList->IASetVertexBuffers(0, 1, &m_planeBufferView);
+		m_commandList->DrawInstanced(6, 1, 0, 0);
+
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		m_commandList->DrawInstanced(3, 1, 0, 0);
 	}
@@ -589,8 +604,18 @@ void D3D12HelloTriangle::CreateAccelerationStructures()
 	// Build the bottom AS from the Triangle vertex buffer
 	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ {m_vertexBuffer.Get(), 3} });
 
-	// Just one instance for now
-	m_instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()} };
+	// #DXR Extra: Per-Instance Data
+	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ {m_planeBuffer.Get(), 6} });
+
+	// 19.2 #DXR Extra: Per-Instance Data
+	// 3 instances of the triangle
+	m_instances = {
+		{bottomLevelBuffers.pResult, DirectX::XMMatrixIdentity()},
+		{bottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(.6f, 0, 0)},
+		{bottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(-.6f, 0, 0)},
+		// 19.6 #DXR Extra: Per-Instance Data
+		{planeBottomLevelBuffers.pResult, DirectX::XMMatrixTranslation(0, 0, 0)}
+	};
 	CreateTopLevelAS(m_instances);
 
 	// Flush the command list and wait for it to finish
@@ -637,8 +662,18 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature()
 ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature() 
 {
 	nv_helpers_dx12::RootSignatureGenerator rsc;
+
 	// 15.1 
-	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV);
+	//rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 0);
+	
+	// 19.10 #DXR Extra: Per-Instance Data
+	// The vertex colors may differ for each instance, so it is not possible to
+	// point to a single buffer in the heap. Instead we use the concept of root
+	// parameters, which are defined directly by a pointer in memory. In the
+	// shader binding table we will associate each hit shader instance with its
+	// constant buffer. Here we bind the buffer to the first slot, accessible in
+	// HLSL as register(b0)
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	return rsc.Generate(m_device.Get(), true);
 }
 
@@ -849,7 +884,11 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 
 	// Adding the triangle hit shader
 	// 16
-	m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_vertexBuffer->GetGPUVirtualAddress()) });
+	//m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_vertexBuffer->GetGPUVirtualAddress()) });
+
+	// 19.11 #DXR Extra: Per-Instance Data
+	// Adding the triangle hit shader and constant buffer data
+	m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)m_globalConstantBuffer->GetGPUVirtualAddress() });
 
 	// Compute the size of the SBT given the number of shaders and their
 	// parameters
@@ -929,4 +968,83 @@ void D3D12HelloTriangle::UpdateCameraBuffer()
 	ThrowIfFailed(m_cameraBuffer->Map(0, nullptr, (void **)&pData)); 
 	memcpy(pData, matrices.data(), m_cameraBufferSize); 
 	m_cameraBuffer->Unmap(0, nullptr);
+}
+
+//-----------------------------------------------------------------------------
+//
+// Create a vertex buffer for the plane
+//
+// 19.4 #DXR Extra: Per-Instance Data
+void D3D12HelloTriangle::CreatePlaneVB()
+{
+	// Define the geometry for a plane.
+	const Vertex planeVertices[] = {
+		{{-1.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 0
+		{{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1
+		{{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2
+		{{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2
+		{{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1
+		{{01.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}} // 4
+	};
+
+	const UINT planeBufferSize = sizeof(planeVertices);
+
+	// Note: using upload heaps to transfer static data like vert buffers is not
+	// recommended. Every time the GPU needs it, the upload heap will be
+	// marshalled over. Please read up on Default Heap usage. An upload heap is
+	// used here for code simplicity and because there are very few verts to
+	// actually transfer.
+	CD3DX12_HEAP_PROPERTIES heapProperty =
+		CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_RESOURCE_DESC bufferResource =
+		CD3DX12_RESOURCE_DESC::Buffer(planeBufferSize);
+	ThrowIfFailed(m_device->CreateCommittedResource(
+		&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+		IID_PPV_ARGS(&m_planeBuffer)));
+
+	// Copy the triangle data to the vertex buffer.
+	UINT8* pVertexDataBegin;
+	CD3DX12_RANGE readRange(
+		0, 0); // We do not intend to read from this resource on the CPU.
+	ThrowIfFailed(m_planeBuffer->Map(
+		0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+	memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices));
+	m_planeBuffer->Unmap(0, nullptr);
+
+	// Initialize the vertex buffer view.
+	m_planeBufferView.BufferLocation = m_planeBuffer->GetGPUVirtualAddress();
+	m_planeBufferView.StrideInBytes = sizeof(Vertex);
+	m_planeBufferView.SizeInBytes = planeBufferSize;
+}
+
+//-----------------------------------------------------------------------------
+//
+// 19.8 #DXR Extra: Per-Instance Data
+void D3D12HelloTriangle::CreateGlobalConstantBuffer()
+{ 
+	// Due to HLSL packing rules, we create the CB with 9 float4 (each needs to start on a 16-byte 
+	// boundary) 
+	XMVECTOR bufferData[] = { 
+		// A 
+		XMVECTOR{1.0f, 0.0f, 0.0f, 1.0f}, 
+		XMVECTOR{0.7f, 0.4f, 0.0f, 1.0f},
+		XMVECTOR{0.4f, 0.7f, 0.0f, 1.0f}, 
+		// B 
+		XMVECTOR{0.0f, 1.0f, 0.0f, 1.0f}, 
+		XMVECTOR{0.0f, 0.7f, 0.4f, 1.0f},
+		XMVECTOR{0.0f, 0.4f, 0.7f, 1.0f}, 
+		// C 
+		XMVECTOR{0.0f, 0.0f, 1.0f, 1.0f}, 
+		XMVECTOR{0.4f, 0.0f, 0.7f, 1.0f}, 
+		XMVECTOR{0.7f, 0.0f, 0.4f, 1.0f}, 
+	}; 
+	// Create our buffer 
+	m_globalConstantBuffer = 
+		nv_helpers_dx12::CreateBuffer( m_device.Get(), sizeof(bufferData), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps); 
+	// Copy CPU memory to GPU 
+	uint8_t* pData; 
+	ThrowIfFailed(m_globalConstantBuffer->Map(0, nullptr, (void**)&pData)); 
+	memcpy(pData, bufferData, sizeof(bufferData)); 
+	m_globalConstantBuffer->Unmap(0, nullptr);
 }
