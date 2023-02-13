@@ -1,6 +1,7 @@
 # DirectX-DRX-RTX-Tutorials
-## Please report anything that is broken or not working in issues
-##Goals
+
+### Please report anything that is broken or not working in issues
+### Goals
    * Self Learn DXR and RTX
    * Help others learn by making well written and working tutorials
 ## Tutorial List 1
