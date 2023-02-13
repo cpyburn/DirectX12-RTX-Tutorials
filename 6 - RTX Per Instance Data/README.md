@@ -135,3 +135,4 @@ The 4th hit group of the SBT is the one corresponding to the plane. Instead of u
 // Adding the plane
 m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {});
 ```
+![](20.9.PNG)
