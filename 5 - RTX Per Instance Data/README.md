@@ -7,7 +7,7 @@ Adding more instances of the triangle is fairly simple, as it only requires addi
 ## 19.2 CreateAccelerationStructures
 In CreateAccelerationStructures, modify the instance list to create 3 instances instead of one, each with its own transform matrix.
 
-```
+```c++
 // 19.2 #DXR Extra: Per-Instance Data
 // 3 instances of the triangle
 m_instances = { 
@@ -19,7 +19,7 @@ m_instances = {
 
 ## 19.3 Hit.hlsl
 In the Hit program, DXR provides the built-in InstanceID() function, which returns the ID we have passed in the third argument of AddInstance in CreateTopLevelAS.
-```
+```c++
 // 19.3
 switch (InstanceID())
 {
