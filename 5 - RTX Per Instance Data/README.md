@@ -34,30 +34,69 @@ case 2: hitColor = (barycentrics.x + barycentrics.y + barycentrics.z) * float3(0
 ![](19.3.PNG)
 
 ## 19.4 Adding a Plane
-We also add the creation of the vertex buffer for the plane, along with the view on the buffer for rasterization:
+We also add the creation of the vertex buffer for the plane, along with the view on the buffer for rasterization in the .h file
 
 ```
 // 19.4 #DXR Extra: Per-Instance Data
-ComPtr<id3d12resource> m_planeBuffer;
+ComPtr<ID3D12Resource> m_planeBuffer;
 D3D12_VERTEX_BUFFER_VIEW m_planeBufferView;
 void CreatePlaneVB();
 ```
 At the end of the source file, add the vertex buffer creation code:
-
+```c++
 //-----------------------------------------------------------------------------
 //
 // Create a vertex buffer for the plane
 //
-// #DXR Extra: Per-Instance Data
-void D3D12HelloTriangle::CreatePlaneVB() { // Define the geometry for a plane. Vertex planeVertices[] = { {{-1.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 0 {{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1 {{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2 {{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2 {{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1 {{01.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}} // 4 }; const UINT planeBufferSize = sizeof(planeVertices); // Note: using upload heaps to transfer static data like vert buffers is not // recommended. Every time the GPU needs it, the upload heap will be // marshalled over. Please read up on Default Heap usage. An upload heap is // used here for code simplicity and because there are very few verts to // actually transfer. CD3DX12_HEAP_PROPERTIES heapProperty = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); CD3DX12_RESOURCE_DESC bufferResource = CD3DX12_RESOURCE_DESC::Buffer(planeBufferSize); ThrowIfFailed(m_device->CreateCommittedResource( &heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, // D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_planeBuffer))); // Copy the triangle data to the vertex buffer. UINT8 *pVertexDataBegin; CD3DX12_RANGE readRange( 0, 0); // We do not intend to read from this resource on the CPU. ThrowIfFailed(m_planeBuffer->Map( 0, &readRange, reinterpret_cast<void **="">(&pVertexDataBegin))); memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices)); m_planeBuffer->Unmap(0, nullptr); // Initialize the vertex buffer view. m_planeBufferView.BufferLocation = m_planeBuffer->GetGPUVirtualAddress(); m_planeBufferView.StrideInBytes = sizeof(Vertex); m_planeBufferView.SizeInBytes = planeBufferSize;
-}
-## 19. LoadAssets
-The plane buffers are added in LoadAssets, immediately after initializing m_vertexBufferView:
+// 19.4 #DXR Extra: Per-Instance Data
+void D3D12HelloTriangle::CreatePlaneVB()
+{
+	// Define the geometry for a plane.
+	const Vertex planeVertices[] = {
+		{{-1.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 0
+		{{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1
+		{{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2
+		{{01.5f, -.8f, 01.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 2
+		{{-1.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}, // 1
+		{{01.5f, -.8f, -1.5f}, {1.0f, 1.0f, 1.0f, 1.0f}} // 4
+	};
 
-// #DXR - Per Instance
+	const UINT planeBufferSize = sizeof(planeVertices);
+
+	// Note: using upload heaps to transfer static data like vert buffers is not
+	// recommended. Every time the GPU needs it, the upload heap will be
+	// marshalled over. Please read up on Default Heap usage. An upload heap is
+	// used here for code simplicity and because there are very few verts to
+	// actually transfer.
+	CD3DX12_HEAP_PROPERTIES heapProperty =
+		CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_RESOURCE_DESC bufferResource =
+		CD3DX12_RESOURCE_DESC::Buffer(planeBufferSize);
+	ThrowIfFailed(m_device->CreateCommittedResource(
+		&heapProperty, D3D12_HEAP_FLAG_NONE, &bufferResource, //
+		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+		IID_PPV_ARGS(&m_planeBuffer)));
+
+	// Copy the triangle data to the vertex buffer.
+	UINT8* pVertexDataBegin;
+	CD3DX12_RANGE readRange(
+		0, 0); // We do not intend to read from this resource on the CPU.
+	ThrowIfFailed(m_planeBuffer->Map(
+		0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+	memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices));
+	m_planeBuffer->Unmap(0, nullptr);
+}
+```
+
+## 19.5 LoadAssets
+The plane buffers are added in LoadAssets, immediately after initializing m_vertexBufferView.
+Line 295 if using this code.
+```c++
+// 19.5 #DXR - Per Instance
 // Create a vertex buffer for a ground plane, similarly to the triangle definition above
 CreatePlaneVB();
-## 19. CreateAccelerationStructures
+```
+## 19.6 CreateAccelerationStructures
 After creating the bottom-level AS of the triangle, add the creation of the BLAS of the plane:
 
 // #DXR Extra: Per-Instance Data
