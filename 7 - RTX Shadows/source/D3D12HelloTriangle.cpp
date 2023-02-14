@@ -683,6 +683,19 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature()
 	// constant buffer. Here we bind the buffer to the first slot, accessible in
 	// HLSL as register(b0)
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
+
+	// 21.3 #DXR Extra - Another ray type
+	// Add a single range pointing to the TLAS in the heap
+	rsc.AddHeapRangesParameter({
+		{
+			2 /*t2*/,
+			1,
+			0,
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1 /*2nd slot of the heap*/
+		},
+	});
+
 	return rsc.Generate(m_device.Get(), true);
 }
 

@@ -72,5 +72,6 @@
     <None Include="Hit.hlsl" />
     <None Include="Miss.hlsl" />
     <None Include="RayGen.hlsl" />
+    <None Include="ShadowRay.hlsl" />
   </ItemGroup>
 </Project>
