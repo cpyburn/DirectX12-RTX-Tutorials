@@ -179,7 +179,7 @@ m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 The resources for the plane hit group need to be enhanced to give access to the heap:
 ```c++
 // 21.5 #DXR Extra - Another ray type
-m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {(void*)(m_constantBuffers[0]->GetGPUVirtualAddress()), heapPointer});
+m_sbtHelper.AddHitGroup(L"PlaneHitGroup", { heapPointer });
 ```
 ## 21.6 CreateTopLevelAS
 The last addition is required to associate the geometry with the corresponding hit groups. In the previous tutorials we indicated that the hit group index of an instance is equal to its instance index, since we only had one hit group per instance. Now we have two hit groups (primary and shadow), so the hit group index has to be 2*i, where i is the instance index:
