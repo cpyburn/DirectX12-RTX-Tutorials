@@ -21,5 +21,6 @@
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/5%20-%20RTX%20Global%20Constant%20Buffer/19.13.PNG)
 * [6 - RTX Per Instance Data](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/6%20-%20RTX%20Per%20Instance%20Data)
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/6%20-%20RTX%20Per%20Instance%20Data/20.9.PNG)
-  
+* [7 - Shadow Rays](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/7%20-%20RTX%20Shadows)
+  * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/7%20-%20RTX%20Shadows/21.6.PNG)
 ## Tutorial List 2
