@@ -135,7 +135,13 @@ We now need to load the shader library and export the corresponding symbols:
 ```c++
 // 21.4 #DXR Extra - Another ray type
 m_shadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ShadowRay.hlsl");
+```
+```c++
+// 21.4 #DXR Extra - Another ray type
 pipeline.AddLibrary(m_shadowLibrary.Get(), { L"ShadowClosestHit", L"ShadowMiss" });
+```
+```c++
+// 21.4 #DXR Extra - Another ray type
 m_shadowSignature = CreateHitSignature();
 ```
 The new closest hit shader also requires to be put into a hit group:
@@ -156,31 +162,38 @@ pipeline.AddRootSignatureAssociation(m_missSignature.Get(), {L"Miss", L"ShadowMi
 ```
 Since it will now be possible to shoot rays from a hit point, this means rays are traced recursively. We then increase the allowed recursion level to 2, keeping in mind that this level needs to be kept as low as possible:
 ```c++
-// #DXR Extra - Another ray type
+// 21.4 #DXR Extra - Another ray type
 pipeline.SetMaxRecursionDepth(2);
 ```
 ## 21.5 CreateShaderBindingTable
 The raytracing pipeline is ready to shoot shadow rays, but the actual shader still needs to be associated to the geometry in the Shader Binding Table. To do this, we add the shadow miss program after the original miss:
 ```c++
-// #DXR Extra - Another ray type
+// 21.5 #DXR Extra - Another ray type
 m_sbtHelper.AddMissProgram(L"ShadowMiss", {});
 ```
 The shadow hit group is added right after adding each addition of the original hit group, so that all the geometry can be hit:
 ```c++
-// #DXR Extra - Another ray type
+// 21.5 #DXR Extra - Another ray type
 m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 ```
 The resources for the plane hit group need to be enhanced to give access to the heap:
 ```c++
-// #DXR Extra - Another ray type
+// 21.5 #DXR Extra - Another ray type
 m_sbtHelper.AddHitGroup(L"PlaneHitGroup", {(void*)(m_constantBuffers[0]->GetGPUVirtualAddress()), heapPointer});
 ```
 ## 21.6 CreateTopLevelAS
 The last addition is required to associate the geometry with the corresponding hit groups. In the previous tutorials we indicated that the hit group index of an instance is equal to its instance index, since we only had one hit group per instance. Now we have two hit groups (primary and shadow), so the hit group index has to be 2*i, where i is the instance index:
 ```c++
-// #DXR Extra - Another ray type
+// 21.6 #DXR Extra - Another ray type
 for (size_t i = 0; i < instances.size(); i++)
-{ m_topLevelASWrapper.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<uint>(i), static_cast<uint>(2*i) /*2 hit groups per instance*/);
+{
+	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), 
+		instances[i].second, 
+		static_cast<UINT>(i), 
+		static_cast<UINT>(2 * i) /*2 hit groups per instance*/
+	);
 }
 ```
-Running this program should now show shadows projected on the plane:  This example introduces how to use several ray types with an application to simple shadows. A more efficient shadow ray implementation would only use a miss shader setting the payload to false, and no closest hit shader. This modification is left as an exercise for the reader.
+Running this program should now show shadows projected on the plane:  
+![](21.6.PNG)
+This example introduces how to use several ray types with an application to simple shadows. A more efficient shadow ray implementation would only use a miss shader setting the payload to false, and no closest hit shader. This modification is left as an exercise for the reader.
