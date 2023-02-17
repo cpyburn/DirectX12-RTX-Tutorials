@@ -6,8 +6,8 @@
    * Help others learn by making well written and working tutorials
 ## Tutorial List 1
 ### Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. See [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
-* [0 - Starting Project](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/0%20-%20Starting%20Project)
-    * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/0%20-%20Starting%20Project/1.PNG)
+* [0 - Rasturize a Triangle - Starting Project](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/0%20-%20Rasturize%20a%20Triangle%20-%20Starting%20Project)
+    * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/0%20-%20Rasturize%20a%20Triangle%20-%20Starting%20Project/1.PNG)
 * [1 - Acceleration Structures](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/1%20-%20Acceleration%20Structures)
 * [2 - Rendering a RTX Triangle](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/2%20-%20Rendering%20a%20RTX%20Triangle)
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/2%20-%20Rendering%20a%20RTX%20Triangle/14.1.PNG)
