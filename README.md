@@ -4,7 +4,8 @@
 ### Goals
    * Self Learn DXR and RTX
    * Help others learn by making well written and working tutorials
-## Tutorial List 1 - Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. See [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
+## Tutorial List 1
+### Credit for the original work goes to Martin-Karl Lefrançois and Pascal Gautron. See [Tutorial](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
 * [0 - Starting Project](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/0%20-%20Starting%20Project)
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/0%20-%20Starting%20Project/1.PNG)
 * [1 - Acceleration Structures](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/1%20-%20Acceleration%20Structures)
