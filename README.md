@@ -1,4 +1,4 @@
-# DirectX DXR RTX Tutorials
+# DirectX Ray Tracing - DXR RTX Tutorials
 
 ### Please report anything that is broken or not working in issues
 ### Goals
