@@ -1,4 +1,4 @@
-# DirectX-DRX-RTX-Tutorials
+# DirectX DXR RTX Tutorials
 
 ### Please report anything that is broken or not working in issues
 ### Goals
