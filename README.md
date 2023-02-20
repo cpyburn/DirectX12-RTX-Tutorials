@@ -22,6 +22,6 @@
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/6%20-%20RTX%20Per%20Instance%20Data/20.9.PNG)
 * [7 - Shadow Rays](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/7%20-%20RTX%20Shadows)
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/7%20-%20RTX%20Shadows/21.6.PNG)
-* [ 8 - RTX Refitting Animation](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/8%20-%20RTX%20Animation%20Refitting)
+* [ 8 - RTX Animation Refitting](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/8%20-%20RTX%20Animation%20Refitting)
   * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/8%20-%20RTX%20Animation%20Refitting/22.3.PNG)
 ## Tutorial List 2
