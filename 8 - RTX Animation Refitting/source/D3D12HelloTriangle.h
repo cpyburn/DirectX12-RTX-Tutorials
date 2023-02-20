@@ -104,8 +104,10 @@ private:
 
 	/// Create the main acceleration structure that holds
 	/// all instances of the scene
-	/// \param     instances : pair of BLAS and transform
-	void CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances);
+	/// \param instances : pair of BLAS and transform
+	// 22. #DXR Extra - Refitting
+	/// \param updateOnly: if true, perform a refit instead of a full build
+	void CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly = false);
 
 	/// Create all acceleration structures, bottom and top
 	void CreateAccelerationStructures();
@@ -165,4 +167,7 @@ private:
 	// 21. #DXR Extra - Another ray type
 	ComPtr<IDxcBlob> m_shadowLibrary;
 	ComPtr<ID3D12RootSignature> m_shadowSignature;
+
+	// 22. #DXR Extra - Refitting
+	uint32_t m_time = 0;
 };

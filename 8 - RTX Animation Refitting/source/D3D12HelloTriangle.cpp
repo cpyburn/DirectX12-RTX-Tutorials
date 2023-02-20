@@ -328,6 +328,12 @@ void D3D12HelloTriangle::OnUpdate()
 {
 	// #DXR Extra: Perspective Camera 
 	UpdateCameraBuffer();
+
+	// 22.1 #DXR Extra - Refitting
+	// Increment the time counter at each frame, and update the corresponding instance matrix of the
+	// first triangle to animate its position
+	m_time++;
+	m_instances[0].second = XMMatrixRotationAxis({ 0.f, 1.f, 0.f }, static_cast<float>(m_time) / 50.0f) * XMMatrixTranslation(0.f, 0.1f * cosf(m_time / 20.f), 0.f);
 }
 
 // Render the scene.
@@ -402,6 +408,12 @@ void D3D12HelloTriangle::PopulateCommandList()
 	}
 	else
 	{
+		// 22.3 #DXR Extra - Refitting 
+		// Refit the top-level acceleration structure to account for the new transform matrix of the 
+		// triangle. Note that the build contains a barrier, hence we can do the rendering in the 
+		// same command list 
+		CreateTopLevelAS(m_instances, true);
+
 		// 13.1 #DXR
 		// Bind the descriptor heap giving access to the top-level acceleration
 		// structure, as well as the raytracing output
@@ -563,50 +575,59 @@ D3D12HelloTriangle::AccelerationStructureBuffers D3D12HelloTriangle::CreateBotto
 // the instances, computing the memory requirements for the AS, and building the
 // AS itself
 //
-void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances) // pair of bottom level AS and matrix of the instance 
+void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly
+	// pair of bottom level AS and matrix of the instance 
+	// 22.2 #DXR Extra - Refitting bool updateOnly 
+	// If true the top-level AS will only be refitted and not 
+	// rebuilt from scratch
+	)
 {
-	// Gather all the instances into the builder helper
-	//for (size_t i = 0; i < instances.size(); i++) 
-	//{
-	//	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
-	//}
-
-	// 20.4 #DXR Extra: Per-Instance Data
-	//for (size_t i = 0; i < instances.size(); i++)
-	//{
-	//	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
-	//}
-
-	// 21.6 #DXR Extra - Another ray type
-	for (size_t i = 0; i < instances.size(); i++)
+	// 22.2 #DXR Extra - Refitting
+	if (!updateOnly)
 	{
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), 
-			instances[i].second, 
-			static_cast<UINT>(i), 
-			static_cast<UINT>(2 * i) /*2 hit groups per instance*/
-		);
+
+		// Gather all the instances into the builder helper
+		//for (size_t i = 0; i < instances.size(); i++) 
+		//{
+		//	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
+		//}
+
+		// 20.4 #DXR Extra: Per-Instance Data
+		//for (size_t i = 0; i < instances.size(); i++)
+		//{
+		//	m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
+		//}
+
+		// 21.6 #DXR Extra - Another ray type
+		for (size_t i = 0; i < instances.size(); i++)
+		{
+			m_topLevelASGenerator.AddInstance(instances[i].first.Get(),
+				instances[i].second,
+				static_cast<UINT>(i),
+				static_cast<UINT>(2 * i) /*2 hit groups per instance*/
+			);
+		}
+
+		// As for the bottom-level AS, the building the AS requires some scratch space
+		// to store temporary data in addition to the actual AS. In the case of the
+		// top-level AS, the instance descriptors also need to be stored in GPU
+		// memory. This call outputs the memory requirements for each (scratch,
+		// results, instance descriptors) so that the application can allocate the
+		// corresponding memory
+		UINT64 scratchSize, resultSize, instanceDescsSize;
+
+		m_topLevelASGenerator.ComputeASBufferSizes(m_device.Get(), true, &scratchSize, &resultSize, &instanceDescsSize);
+
+		// Create the scratch and result buffers. Since the build is all done on GPU,
+		// those can be allocated on the default heap
+		m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer(m_device.Get(), scratchSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nv_helpers_dx12::kDefaultHeapProps);
+		m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer(m_device.Get(), resultSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps);
+
+		// The buffer describing the instances: ID, shader binding information,
+		// matrices ... Those will be copied into the buffer by the helper through
+		// mapping, so the buffer has to be allocated on the upload heap.
+		m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer(m_device.Get(), instanceDescsSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 	}
-
-	// As for the bottom-level AS, the building the AS requires some scratch space
-	// to store temporary data in addition to the actual AS. In the case of the
-	// top-level AS, the instance descriptors also need to be stored in GPU
-	// memory. This call outputs the memory requirements for each (scratch,
-	// results, instance descriptors) so that the application can allocate the
-	// corresponding memory
-	UINT64 scratchSize, resultSize, instanceDescsSize;
-
-	m_topLevelASGenerator.ComputeASBufferSizes(m_device.Get(), true, &scratchSize, &resultSize, &instanceDescsSize);
-
-	// Create the scratch and result buffers. Since the build is all done on GPU,
-	// those can be allocated on the default heap
-	m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer(m_device.Get(), scratchSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nv_helpers_dx12::kDefaultHeapProps);
-	m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer(m_device.Get(), resultSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps);
-
-	// The buffer describing the instances: ID, shader binding information,
-	// matrices ... Those will be copied into the buffer by the helper through
-	// mapping, so the buffer has to be allocated on the upload heap.
-	m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer(m_device.Get(), instanceDescsSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
-
 	// After all the buffers are allocated, or if only an update is required, we
 	// can build the acceleration structure. Note that in the case of the update
 	// we also pass the existing AS as the 'previous' AS, so that it can be
