@@ -1,3 +1,4 @@
+# 22. Animation Refitting
 In this tutorial we will consider adding movement in the scene. While this can be done straightforwardly by completely recomputing the acceleration structures, much faster updates can be performed by simply refitting those using the new vertex coordinates or instance transforms. For the sake of simplicity this document only considers updating instance matrices and the top-level acceleration structure, but the same approach can be used to update bottom-level AS as well. In the header file, we first need to modify the signature of CreateTopLevelAS to be able to indicate whether to do a full build or a simple update:
 
 /// Create the main acceleration structure that holds
