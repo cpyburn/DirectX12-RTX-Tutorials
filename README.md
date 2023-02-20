@@ -9,7 +9,7 @@
 #### All code has been fixed and is working (if anything is broken please report it as an issue)
 * [0 - Rasturize a Triangle - Starting Project](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/0%20-%20Rasturize%20a%20Triangle%20-%20Starting%20Project)
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/0%20-%20Rasturize%20a%20Triangle%20-%20Starting%20Project/1.PNG)
-* [1 - RTX - Acceleration Structures](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/1%20-%20RTX%20-%20Acceleration%20Structures)
+* [1 - RTX - Acceleration Structures](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/1%20-%20RTX%20Acceleration%20Structures)
 * [2 - RTX Render a Triangle](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/2%20-%20RTX%20Render%20a%20Triangle)
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/2%20-%20RTX%20Render%20a%20Triangle/14.1.PNG)
 * [3 - RTX Using the Vertex Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/3%20-%20RTX%20Using%20the%20Vertex%20Buffer)
