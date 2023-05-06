@@ -14,6 +14,8 @@
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/2%20-%20RTX%20Render%20a%20Triangle/14.1.PNG)
 * [3 - RTX Using the Vertex Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/3%20-%20RTX%20Using%20the%20Vertex%20Buffer)
     * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/3%20-%20RTX%20Using%20the%20Vertex%20Buffer/17.1.PNG)
+* [3 - Extra - RTX Using the Index Buffer]()
+    * ![]()
 * [4 - RTX with Perspective Camera](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/4%20-%20RTX%20with%20Perspective%20Camera)
    * ![](https://github.com/cpyburn/DirectX-RTX-Tutorials/blob/main/4%20-%20RTX%20with%20Perspective%20Camera/18.9.PNG)
 * [5 - RTX Global Constant Buffer](https://github.com/cpyburn/DirectX-RTX-Tutorials/tree/main/5%20-%20RTX%20Global%20Constant%20Buffer)
