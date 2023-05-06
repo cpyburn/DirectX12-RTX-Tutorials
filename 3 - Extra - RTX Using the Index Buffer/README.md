@@ -1,4 +1,4 @@
-TODO
+TODO: this is working but documentation needs to be cleaned up
 
 DXR Tutorial Extra : Indexed Geometry
 Welcome to the next section of the tutorial. If you miss the first tutorial, it is here The bases of this tutorial starts at the end of the previous one. You can download the entire project here The first tutorial only shows a triangle, which can feel a bit simplistic:  In this tutorial, we will convert the plane triangle to a three dimensional one, a tetrahedron. Do do this, we will convert the simple triangle to an indexed version of it. Add the new resources
