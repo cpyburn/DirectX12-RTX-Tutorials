@@ -1,6 +1,7 @@
 # 3.0 Extra - DXR Tutorial Extra : Indexed Geometry
 In this tutorial, we will use real indices instead of auto generated system indexes - PrimitiveIndex().
 
+## .h Header file
 ```c++
 // 3.0 Extra
 ComPtr<ID3D12Resource> m_indexBuffer;
