@@ -1,52 +1,113 @@
-# 3 RTX Using the Vertex Buffer
+# 3.0 Extra - DXR Tutorial Extra : Indexed Geometry
+In this tutorial, we will use real indices instead of auto generated system indexes - PrimitiveIndex().
 
-## 15 Using the Vertex Buffer
-The colors in our Hit shader are hardcoded in the shader, to enforce consistency between rasterization and raytracing it is better to use to color information stored in the vertex buffer. Accessing vertex buffer information is required in most practical implementations of raytracing, not only for vertex colors but also, for example, to lookup and interpolate texture coordinates or normals.
-
-## 15.1 CreateHitSignature
-The hit group originally did not require any external input as it was only processing the intersection attributes and returning a color in the payload. To access the vertex buffer, we need to tell the Hit Root signature that we will be using a shader resource view (SRV). By default, it will be bound to register(t0) in the shader. Add the following line in CreateHitSignature()
-
+## .h Header file
 ```c++
-rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV);
+// 3.0 Extra
+ComPtr<ID3D12Resource> m_indexBuffer;
+D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 ```
 
-## 16. CreateShaderBindingTable
-In the SBT, we now have to pass the address of this buffer in GPU memory to the Hit shader, as specified by the root signature. In CreateShaderBindingTable(), replace the AddHitGroup call by:
-
+## LoadAssets method
 ```c++
-m_sbtHelper.AddHitGroup(L"HitGroup", {(void*)(m_vertexBuffer->GetGPUVirtualAddress())});
-```
-## 17. Hit.hlsl
-The last modification is to modify the Hit shader to get an access to the data. We replicate the data structure of the vertices in the HLSL code by defining STriVertex, which has the same bit mapping as the Vertex structure defined on the CPU side. We then reference a StructuredBuffer mapped to register(t0).
-
-```c++
-struct STriVertex
-{ 
-	float3 vertex;
-	float4 color;
-};
-StructuredBuffer<STriVertex> BTriVertex : register(t0);
-```
-
-In the ClosestHit function of the shader, we can use the built-in PrimitiveIndex() call to obtain the index of the triangle we hit. Remove the previous hit color computation and replace it by this to access the vertex data:
-```c++
-float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
-uint vertId = 3 * PrimitiveIndex();
-float3 hitColor = BTriVertex[vertId + 0].color * barycentrics.x + BTriVertex[vertId + 1].color * barycentrics.y + BTriVertex[vertId + 2].color * barycentrics.z;
-payload.colorAndDistance = float4(hitColor, RayTCurrent());
-```
-
-## 17.1 LoadAssets
-You can verify that the vertex buffer access is working by modifying the creation of the vertex buffer in LoadAssets(). For example, by changing it to the following, the colors in both the raster and raytracing will change.
-
-```c++
-// 17.1
+// 3.0 Extra
 Vertex triangleVertices[] = 
 {
-	{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}},
-	{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 1.0f, 1.0f}},
-	{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}}
+  {{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}},
+  {{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+  {{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}}
 };
 ```
 
-![](17.1.PNG)
+Then, we need to create and set the indices right after setting m_vertexBufferView.
+```c++
+// 3.0 Extra - Create the index buffer
+{
+  std::vector<UINT> indices = { 0, 1, 2, 0, 3, 1, 0, 2, 3, 1, 3, 2 };
+  const UINT indexBufferSize = static_cast<UINT>(indices.size()) * sizeof(UINT);
+  CD3DX12_HEAP_PROPERTIES heapProperty = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+  CD3DX12_RESOURCE_DESC bufferResource = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+  ThrowIfFailed(m_device->CreateCommittedResource(
+    &heapProperty, 
+    D3D12_HEAP_FLAG_NONE, 
+    &bufferResource, 
+    D3D12_RESOURCE_STATE_GENERIC_READ, 
+    nullptr, IID_PPV_ARGS(&m_indexBuffer)));
+  // Copy the triangle data to the index buffer.
+  UINT8* pIndexDataBegin;
+  CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
+  ThrowIfFailed(m_indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+  memcpy(pIndexDataBegin, indices.data(), indexBufferSize);
+  m_indexBuffer->Unmap(0, nullptr);
+
+  // Initialize the index buffer view.
+  m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+  m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+  m_indexBufferView.SizeInBytes = indexBufferSize;
+}
+```
+
+## PopulateCommandList method
+To draw in the raster, you simply need to change how it is draw, by making the following changes in PopulateCommandList().
+```c++
+// 3.0 Extra
+m_commandList->IASetIndexBuffer(&m_indexBufferView);
+m_commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
+```
+
+## CreateBottomLevelAS method
+To see this geometry in the raytracing path, we need to improve the CreateBottomLevelAS method to support indexed geometry. We first change the signature of the method to include index buffers:
+```c++
+D3D12HelloTriangle::AccelerationStructureBuffers D3D12HelloTriangle::CreateBottomLevelAS(std::vector<std::pair<ComPtr<ID3D12Resource>, uint32_t>> vVertexBuffers, std::vector<std::pair<ComPtr<ID3D12Resource>, uint32_t>> vIndexBuffers)
+```
+We then replace the beginning of the method as follows so that the bottom-level AS helper is called with indexing if needed:
+```c++
+// 3.0 Extra - Adding all vertex buffers and not transforming their position. 
+for (size_t i = 0; i < vVertexBuffers.size(); i++)
+{
+  // 
+  for (const auto& buffer : vVertexBuffers)
+  {
+    if (i < vIndexBuffers.size() && vIndexBuffers[i].second > 0)
+      bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0, true);
+    else
+      bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), 0, 0);
+  }
+}
+```
+
+## CreateAccelerationStructures method
+The acceleration structure build calls also need to be updated to reflect the new interface as well as to add the new geometry:
+```c++
+// 3.0 Extra
+AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ {m_vertexBuffer.Get(), 3} }, { {m_indexBuffer.Get(), 3} });
+```
+But the shading is not correct with the raytracer. This is because we are accessing invalid data in the Hit Shader.
+```c++
+// 3.0 Extra
+uint vertId = 3 * indices[PrimitiveIndex()];
+```
+
+## CreateHitSignature
+Changing the shader is not enough, we need to inform the shader that more information is needed.
+Do to this, change the signature in `CreateHitSignature`.
+```c++
+// 3.0 Extra
+rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 0); //t0
+rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 1); //t1
+```
+
+## CreateShaderBindingTable
+Finally, we need to bind the new data to the shader and we are doing it in the `CreateShaderBindingTable` by modifying
+the data pass to the `HitGroup`.
+```c++
+// 3.0 Extra
+m_sbtHelper.AddHitGroup(L"HitGroup", 
+  { 
+    (void*)(m_vertexBuffer->GetGPUVirtualAddress()), 
+    // 3.0 Extra
+    (void*)(m_indexBuffer->GetGPUVirtualAddress()) 
+  });
+```
+
+Now the result in the raytracer is similar to the rasterizer. Note that if you have other hit groups attached to the same root signature, you would have to adjust their list of root parameters as well. 
