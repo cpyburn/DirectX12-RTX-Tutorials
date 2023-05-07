@@ -615,6 +615,7 @@ void D3D12HelloTriangle::CreateTopLevelAS(const std::vector<std::pair<ComPtr<ID3
 void D3D12HelloTriangle::CreateAccelerationStructures() 
 {
 	// Build the bottom AS from the Triangle vertex buffer
+	// 3.0 Extra
 	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ {m_vertexBuffer.Get(), 3} }, { {m_indexBuffer.Get(), 3} });
 
 	// Just one instance for now
@@ -876,6 +877,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 
 	// Adding the triangle hit shader
 	// 16
+	// 3.0 Extra
 	m_sbtHelper.AddHitGroup(L"HitGroup", 
 		{ 
 			(void*)(m_vertexBuffer->GetGPUVirtualAddress()), 
