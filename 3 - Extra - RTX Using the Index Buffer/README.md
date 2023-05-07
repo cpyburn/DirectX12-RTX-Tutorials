@@ -5,7 +5,7 @@ In this tutorial, we will use real indices instead of auto generated system inde
 // 3.0 Extra
 ComPtr<ID3D12Resource> m_indexBuffer;
 D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-``
+```
 
 ## LoadAssets method
 ```c++
